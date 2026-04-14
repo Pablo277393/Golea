@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   Users, 
@@ -8,7 +8,9 @@ import {
   LogOut, 
   LayoutDashboard,
   ClipboardList,
-  Target
+  Target,
+  Menu,
+  X
 } from 'lucide-react';
 import Overview from '../components/views/Overview';
 import TeamsView from '../components/views/TeamsView';
@@ -21,6 +23,7 @@ import MVPView from '../components/views/MVPView';
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [activeView, setActiveView] = useState('Resumen');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const menuItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Resumen', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
@@ -33,6 +36,11 @@ const Dashboard = () => {
   ];
 
   const filteredMenu = menuItems.filter(item => item.roles.includes(user?.role));
+
+  const handleSelectView = (label) => {
+    setActiveView(label);
+    setIsMenuOpen(false);
+  };
 
   const renderView = () => {
     switch (activeView) {
@@ -48,46 +56,130 @@ const Dashboard = () => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <aside className="glass-card" style={{ width: '260px', borderRadius: '0', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '2rem 1.5rem' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-darker)' }}>
+      {/* Topbar */}
+      <header style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        height: '70px', 
+        background: 'rgba(10, 11, 20, 0.8)', 
+        backdropFilter: 'blur(10px)', 
+        borderBottom: '1px solid var(--border)', 
+        display: 'flex', 
+        alignItems: 'center', 
+        padding: '0 1.5rem', 
+        zIndex: 100,
+        justifyContent: 'space-between'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button 
+            onClick={() => setIsMenuOpen(true)}
+            style={{ 
+              background: 'var(--glass)', 
+              border: '1px solid var(--border)', 
+              color: 'var(--text-main)', 
+              padding: '0.5rem', 
+              borderRadius: '0.5rem', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            <Menu size={24} />
+          </button>
+          <h2 className="text-gradient" style={{ fontWeight: '800', fontSize: '1.5rem', marginLeft: '0.5rem' }}>Golea</h2>
+        </div>
+        
+        <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <span>{user?.username} ({user?.role})</span>
+        </div>
+      </header>
+
+      {/* Drawer Menu */}
+      <div 
+        style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: isMenuOpen ? '0' : '-300px', 
+          width: '280px', 
+          height: '100vh', 
+          background: 'rgba(13, 14, 25, 0.98)', 
+          zIndex: 200, 
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
+          boxShadow: '10px 0 30px rgba(0,0,0,0.5)',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <div style={{ padding: '2rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
           <h2 className="text-gradient" style={{ fontWeight: '800' }}>Golea</h2>
+          <button 
+            onClick={() => setIsMenuOpen(false)}
+            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+          >
+            <X size={24} />
+          </button>
         </div>
 
-        <nav style={{ flex: 1, padding: '0 1rem' }}>
+        <nav style={{ flex: 1, padding: '1.5rem 1rem' }}>
           {filteredMenu.map((item, index) => (
             <div 
               key={index} 
-              onClick={() => setActiveView(item.label)}
+              onClick={() => handleSelectView(item.label)}
               style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '1rem', 
-                padding: '0.75rem 1rem', 
-                borderRadius: '0.5rem', 
+                padding: '0.85rem 1rem', 
+                borderRadius: '0.75rem', 
                 cursor: 'pointer',
                 marginBottom: '0.5rem',
                 color: activeView === item.label ? 'var(--primary)' : 'var(--text-muted)',
                 background: activeView === item.label ? 'rgba(0, 255, 136, 0.1)' : 'transparent',
-                transition: 'var(--transition)'
+                transition: 'var(--transition)',
+                borderLeft: activeView === item.label ? '3px solid var(--primary)' : '3px solid transparent'
               }}
             >
               {item.icon}
-              <span style={{ fontWeight: '500' }}>{item.label}</span>
+              <span style={{ fontWeight: '600' }}>{item.label}</span>
             </div>
           ))}
         </nav>
 
-        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)' }}>
-          <button onClick={logout} className="btn btn-outline" style={{ width: '100%', justifyContent: 'flex-start' }}>
+        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)' }}>
+          <button onClick={logout} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}>
             <LogOut size={20} /> Cerrar Sesión
           </button>
         </div>
-      </aside>
+      </div>
+
+      {/* Backdrop */}
+      {isMenuOpen && (
+        <div 
+          onClick={() => setIsMenuOpen(false)}
+          style={{ 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            background: 'rgba(0,0,0,0.6)', 
+            backdropFilter: 'blur(4px)', 
+            zIndex: 150 
+          }}
+        />
+      )}
 
       {/* Main Content */}
-      <main style={{ flex: 1, padding: '2.5rem', overflowY: 'auto', background: 'var(--bg-darker)' }}>
+      <main style={{ 
+        padding: '100px 1.5rem 2.5rem 1.5rem', 
+        minHeight: '100vh',
+        maxWidth: '1200px',
+        margin: '0 auto'
+      }}>
         {renderView()}
       </main>
     </div>

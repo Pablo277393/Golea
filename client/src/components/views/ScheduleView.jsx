@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, MapPin, Clock, Plus, ArrowLeft, ClipboardCheck } from 'lucide-react';
+import { Calendar, MapPin, Clock, Plus, ArrowLeft, ClipboardCheck, ThumbsUp, X } from 'lucide-react';
 
 const ScheduleView = () => {
   const { user } = useAuth();
   const [selectedMatch, setSelectedMatch] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [newEvent, setNewEvent] = useState({
+    type: 'training',
+    title: '',
+    date: '2026-04-18',
+    time: '18:00',
+    location: '',
+    description: '',
+    team: 'Primer Equipo'
+  });
 
-  const [events] = useState([
+  const [events, setEvents] = useState([
     { 
       id: 1, 
       type: 'match', 
@@ -16,34 +26,53 @@ const ScheduleView = () => {
       location: 'Estadio Local', 
       team: 'Primer Equipo',
       description: 'Partido correspondiente a la jornada 24 de liga.',
-      callup: ['Juan Pérez', 'Marcos Ruiz', 'Luis Cano', 'Iván G.', 'Pol Soler']
+      callup: ['Juan Pérez', 'Marcos Ruiz', 'Luis Cano', 'Iván G.', 'Pol Soler'],
+      votes: 12
     },
     { 
       id: 2, 
       type: 'training', 
       title: 'Entrenamiento Táctico', 
       date: '2026-04-15', 
-      description: 'Sesión enfocada en la salida de balón y presión tras pérdida. Traer ropa de entrenamiento oficial.',
-      team: 'Primer Equipo' 
+      description: 'Sesión enfocada en la salida de balón y presión tras pérdida.',
+      team: 'Primer Equipo',
+      votes: 5 
     },
     { 
       id: 3, 
       type: 'training', 
       title: 'Físico', 
       date: '2026-04-16', 
-      description: 'Trabajo preventivo y de fuerza en el gimnasio del club.',
-      team: 'Juvenil A' 
+      description: 'Trabajo preventivo y de fuerza en el gimnasio.',
+      team: 'Juvenil A',
+      votes: 3 
     },
   ]);
+
+  const handleCreateEvent = (e) => {
+    e.preventDefault();
+    const event = {
+      ...newEvent,
+      id: Date.now(),
+      votes: 0,
+      callup: newEvent.type === 'match' ? ['Jugador Demo 1', 'Jugador Demo 2'] : null
+    };
+    setEvents([event, ...events]);
+    setShowForm(false);
+    setNewEvent({ type: 'training', title: '', date: '2026-04-18', time: '18:00', location: '', description: '', team: 'Primer Equipo' });
+  };
+
+  const handleVote = (id) => {
+    setEvents(events.map(ev => ev.id === id ? { ...ev, votes: ev.votes + 1 } : ev));
+    if (selectedMatch && selectedMatch.id === id) {
+      setSelectedMatch({ ...selectedMatch, votes: selectedMatch.votes + 1 });
+    }
+  };
 
   if (selectedMatch) {
     return (
       <div>
-        <button 
-          onClick={() => setSelectedMatch(null)} 
-          className="btn btn-outline" 
-          style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-        >
+        <button onClick={() => setSelectedMatch(null)} className="btn btn-outline" style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <ArrowLeft size={18} /> Volver al Calendario
         </button>
 
@@ -52,7 +81,7 @@ const ScheduleView = () => {
           <p style={{ color: 'var(--text-muted)' }}>{selectedMatch.team} • Jornada de Liga</p>
         </header>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '1.5rem', alignItems: 'start' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '1.5rem', alignItems: 'start' }}>
           <div className="glass-card">
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>{selectedMatch.title}</h3>
             
@@ -68,7 +97,13 @@ const ScheduleView = () => {
               </div>
             </div>
 
-            <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>{selectedMatch.description}</p>
+            <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '2rem' }}>{selectedMatch.description}</p>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+               <button onClick={() => handleVote(selectedMatch.id)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                 <ThumbsUp size={18} /> {selectedMatch.votes} Votos
+               </button>
+            </div>
           </div>
 
           <div className="glass-card">
@@ -92,10 +127,57 @@ const ScheduleView = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Calendario y Eventos</h2>
-        {(user?.role === 'coach' || user?.role === 'superadmin') && (
-          <button className="btn btn-primary"><Plus size={18} /> Nuevo Evento</button>
+        {(user?.role === 'coach' || user?.role === 'superadmin' || user?.role === 'admin') && (
+          <button onClick={() => setShowForm(!showForm)} className="btn btn-primary">
+            {showForm ? <X size={18} /> : <Plus size={18} />} {showForm ? 'Cerrar' : 'Nuevo Evento'}
+          </button>
         )}
       </div>
+
+      {showForm && (
+        <div className="glass-card" style={{ marginBottom: '2rem', border: '1px solid var(--primary)' }}>
+          <form onSubmit={handleCreateEvent} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div className="input-group">
+              <label>Tipo</label>
+              <select value={newEvent.type} onChange={(e) => setNewEvent({...newEvent, type: e.target.value})} style={{ width: '100%', padding: '0.75rem', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: '0.5rem', color: 'var(--text-main)' }}>
+                <option value="training">Entrenamiento</option>
+                <option value="match">Partido</option>
+              </select>
+            </div>
+            <div className="input-group">
+              <label>Título</label>
+              <input type="text" value={newEvent.title} onChange={(e) => setNewEvent({...newEvent, title: e.target.value})} placeholder="Ej: vs Real Madrid" required />
+            </div>
+            <div className="input-group">
+              <label>Fecha</label>
+              <input type="date" value={newEvent.date} onChange={(e) => setNewEvent({...newEvent, date: e.target.value})} required />
+            </div>
+            <div className="input-group">
+              <label>Equipo</label>
+              <input type="text" value={newEvent.team} onChange={(e) => setNewEvent({...newEvent, team: e.target.value})} required />
+            </div>
+            {newEvent.type === 'match' && (
+               <>
+                <div className="input-group">
+                  <label>Hora</label>
+                  <input type="time" value={newEvent.time} onChange={(e) => setNewEvent({...newEvent, time: e.target.value})} />
+                </div>
+                <div className="input-group">
+                  <label>Lugar</label>
+                  <input type="text" value={newEvent.location} onChange={(e) => setNewEvent({...newEvent, location: e.target.value})} placeholder="Estadio" />
+                </div>
+               </>
+            )}
+            <div className="input-group" style={{ gridColumn: '1 / -1' }}>
+              <label>Descripción</label>
+              <textarea value={newEvent.description} onChange={(e) => setNewEvent({...newEvent, description: e.target.value})} placeholder="Mensaje informativo..." style={{ width: '100%', padding: '0.75rem', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: '0.5rem', color: 'var(--text-main)', minHeight: '80px' }} />
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Crear Evento</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: '1rem' }}>
         {events.map(event => (
@@ -127,17 +209,18 @@ const ScheduleView = () => {
               </div>
             </div>
             
-            <div style={{ textAlign: 'right' }}>
-               <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>{event.team}</p>
-               {event.type === 'match' && (
-                 <button 
-                  onClick={() => setSelectedMatch(event)}
-                  className="btn btn-outline" 
-                  style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }}
-                >
-                  Ver más
-                </button>
-               )}
+            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+               <p style={{ fontSize: '0.875rem', fontWeight: '600' }}>{event.team}</p>
+               <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={(e) => { e.stopPropagation(); handleVote(event.id); }} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <ThumbsUp size={14} /> {event.votes}
+                  </button>
+                  {event.type === 'match' && (
+                    <button onClick={() => setSelectedMatch(event)} className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }}>
+                      Ver más
+                    </button>
+                  )}
+               </div>
             </div>
           </div>
         ))}

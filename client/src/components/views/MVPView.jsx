@@ -1,7 +1,18 @@
-import React from 'react';
-import { Trophy, Award, TrendingUp } from 'lucide-react';
+import React, { useState } from 'react';
+import { Trophy, Award, TrendingUp, ThumbsUp } from 'lucide-react';
 
 const MVPView = () => {
+  const [candidates, setCandidates] = useState([
+    { id: 1, name: 'Marc Rovira', votes: 12 },
+    { id: 2, name: 'Pau García', votes: 8 },
+    { id: 3, name: 'Àlex Marín', votes: 15 },
+    { id: 4, name: 'Dani Ruiz', votes: 5 }
+  ]);
+
+  const handleVote = (id) => {
+    setCandidates(candidates.map(c => c.id === id ? { ...c, votes: c.votes + 1 } : c));
+  };
+
   return (
     <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
       <header style={{ marginBottom: '2.5rem' }}>
@@ -15,15 +26,24 @@ const MVPView = () => {
             <Trophy size={24} className="text-gradient" /> Candidatos Semanales
           </h3>
           <div style={{ display: 'grid', gap: '1rem' }}>
-            {['Marc Rovira', 'Pau García', 'Àlex Marín', 'Dani Ruiz'].map((name, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--glass)', borderRadius: '0.75rem' }}>
+            {candidates.map((candidate, i) => (
+              <div key={candidate.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: 'var(--glass)', borderRadius: '0.75rem', border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary)', color: 'var(--bg-darker)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                      {i+1}
                    </div>
-                   <span style={{ fontWeight: '600' }}>{name}</span>
+                   <div>
+                     <span style={{ fontWeight: '600', display: 'block' }}>{candidate.name}</span>
+                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{candidate.votes} votos acumulados</span>
+                   </div>
                 </div>
-                <button className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }}>Votar</button>
+                <button 
+                  onClick={() => handleVote(candidate.id)}
+                  className="btn btn-primary" 
+                  style={{ padding: '0.4rem 1rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <ThumbsUp size={14} /> Votar
+                </button>
               </div>
             ))}
           </div>
