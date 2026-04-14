@@ -1,0 +1,60 @@
+import axios from 'axios';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const api = axios.create({
+  baseURL: API_URL,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('golea_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const authService = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  getMe: () => api.get('/users/me'),
+};
+
+export const teamService = {
+  getTeams: () => api.get('/teams'),
+  getTeam: (id) => api.get(`/teams/${id}`),
+  createTeam: (data) => api.post('/teams', data),
+};
+
+export const matchService = {
+  getMatches: () => api.get('/matches'),
+  createMatch: (data) => api.post('/matches', data),
+  updateScore: (id, scores) => api.patch(`/matches/${id}/score`, scores),
+};
+
+export const trainingService = {
+  getTrainings: () => api.get('/trainings'),
+  createTraining: (data) => api.post('/trainings', data),
+  getCallups: (type, id) => api.get(`/trainings/callups/${type}/${id}`),
+  updateCallups: (type, id, playerIds) => api.post(`/trainings/callups/${type}/${id}`, { player_ids: playerIds }),
+};
+
+export const notificationService = {
+  getNotifications: () => api.get('/notifications'),
+  sendNotification: (data) => api.post('/notifications', data),
+  markAsRead: (id) => api.patch(`/notifications/${id}/read`),
+};
+
+export const gamificationService = {
+  getPredictions: () => api.get('/gamification/predictions'),
+  submitPrediction: (data) => api.post('/gamification/predictions', data),
+  getMVP: (teamId, week, year) => api.get(`/gamification/mvp/${teamId}/${week}/${year}`),
+  voteMVP: (data) => api.post('/gamification/mvp/vote', data),
+};
+
+export const familyService = {
+  getChildren: () => api.get('/family/children'),
+  addChild: (data) => api.post('/family/add-child', data),
+};
+
+export default api;
