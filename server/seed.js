@@ -20,13 +20,15 @@ async function seed() {
     const jugPass = await bcrypt.hash('jugador123', salt);
     const padPass = await bcrypt.hash('padre123', salt);
     const coachPass = await bcrypt.hash('coach123', salt);
+    const adminPass = await bcrypt.hash('admin123', salt);
 
     // Initial users
     const users = [
       ['superadmin', 'superadmin@gmail.com', superPass, 'superadmin'],
       ['jugador', 'jugador@gmail.com', jugPass, 'player'],
       ['padre', 'padre@gmail.com', padPass, 'parent'],
-      ['coach', 'coach@gmail.com', coachPass, 'coach']
+      ['coach', 'coach@gmail.com', coachPass, 'coach'],
+      ['admin', 'admin@gmail.com', adminPass, 'admin']
     ];
 
     for (const [username, email, pass, role] of users) {

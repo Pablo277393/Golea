@@ -1,7 +1,7 @@
--- Antigravity Database Schema (PostgreSQL)
+-- Golea Database Schema (PostgreSQL)
 
--- Roles: coach, player, parent, admin
-CREATE TYPE user_role AS ENUM ('coach', 'player', 'parent', 'admin');
+-- Roles: coach, player, parent, admin, superadmin
+CREATE TYPE user_role AS ENUM ('coach', 'player', 'parent', 'admin', 'superadmin');
 CREATE TYPE event_type AS ENUM ('match', 'training');
 CREATE TYPE notification_type AS ENUM ('informative', 'match', 'training');
 CREATE TYPE callup_status AS ENUM ('called', 'injured', 'unavailable', 'standby');

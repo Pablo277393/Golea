@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, LogIn, ShieldCheck } from 'lucide-react';
 
@@ -66,10 +66,6 @@ const LoginPage = () => {
           </button>
         </form>
 
-        <div style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-          <span style={{ color: 'var(--text-muted)' }}>¿No tienes cuenta? </span>
-          <Link to="/register" style={{ color: 'var(--primary)', textDecoration: 'none', fontWeight: '600' }}>Regístrate aquí</Link>
-        </div>
       </div>
     </div>
   );

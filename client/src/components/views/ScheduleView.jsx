@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, MapPin, Clock, Plus, ArrowLeft, ClipboardCheck, ThumbsUp, X } from 'lucide-react';
+import { Calendar, MapPin, Clock, Plus, ArrowLeft, ClipboardCheck, X } from 'lucide-react';
 
 const ScheduleView = () => {
   const { user } = useAuth();
@@ -26,8 +26,7 @@ const ScheduleView = () => {
       location: 'Estadio Local', 
       team: 'Primer Equipo',
       description: 'Partido correspondiente a la jornada 24 de liga.',
-      callup: ['Juan Pérez', 'Marcos Ruiz', 'Luis Cano', 'Iván G.', 'Pol Soler'],
-      votes: 12
+      callup: ['Juan Pérez', 'Marcos Ruiz', 'Luis Cano', 'Iván G.', 'Pol Soler']
     },
     { 
       id: 2, 
@@ -35,8 +34,7 @@ const ScheduleView = () => {
       title: 'Entrenamiento Táctico', 
       date: '2026-04-15', 
       description: 'Sesión enfocada en la salida de balón y presión tras pérdida.',
-      team: 'Primer Equipo',
-      votes: 5 
+      team: 'Primer Equipo'
     },
     { 
       id: 3, 
@@ -44,8 +42,7 @@ const ScheduleView = () => {
       title: 'Físico', 
       date: '2026-04-16', 
       description: 'Trabajo preventivo y de fuerza en el gimnasio.',
-      team: 'Juvenil A',
-      votes: 3 
+      team: 'Juvenil A'
     },
   ]);
 
@@ -54,19 +51,11 @@ const ScheduleView = () => {
     const event = {
       ...newEvent,
       id: Date.now(),
-      votes: 0,
       callup: newEvent.type === 'match' ? ['Jugador Demo 1', 'Jugador Demo 2'] : null
     };
     setEvents([event, ...events]);
     setShowForm(false);
     setNewEvent({ type: 'training', title: '', date: '2026-04-18', time: '18:00', location: '', description: '', team: 'Primer Equipo' });
-  };
-
-  const handleVote = (id) => {
-    setEvents(events.map(ev => ev.id === id ? { ...ev, votes: ev.votes + 1 } : ev));
-    if (selectedMatch && selectedMatch.id === id) {
-      setSelectedMatch({ ...selectedMatch, votes: selectedMatch.votes + 1 });
-    }
   };
 
   if (selectedMatch) {
@@ -97,13 +86,7 @@ const ScheduleView = () => {
               </div>
             </div>
 
-            <p style={{ color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '2rem' }}>{selectedMatch.description}</p>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-               <button onClick={() => handleVote(selectedMatch.id)} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                 <ThumbsUp size={18} /> {selectedMatch.votes} Votos
-               </button>
-            </div>
+            <p style={{ color: 'var(--text-muted)', lineHeight: '1.6' }}>{selectedMatch.description}</p>
           </div>
 
           <div className="glass-card">
@@ -209,18 +192,17 @@ const ScheduleView = () => {
               </div>
             </div>
             
-            <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
-               <p style={{ fontSize: '0.875rem', fontWeight: '600' }}>{event.team}</p>
-               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={(e) => { e.stopPropagation(); handleVote(event.id); }} className="btn btn-outline" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <ThumbsUp size={14} /> {event.votes}
-                  </button>
-                  {event.type === 'match' && (
-                    <button onClick={() => setSelectedMatch(event)} className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }}>
-                      Ver más
-                    </button>
-                  )}
-               </div>
+            <div style={{ textAlign: 'right' }}>
+               <p style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>{event.team}</p>
+               {event.type === 'match' && (
+                 <button 
+                  onClick={() => setSelectedMatch(event)}
+                  className="btn btn-outline" 
+                  style={{ padding: '0.4rem 1rem', fontSize: '0.875rem' }}
+                >
+                  Ver más
+                </button>
+               )}
             </div>
           </div>
         ))}
