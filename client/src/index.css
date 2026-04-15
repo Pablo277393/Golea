@@ -1,3 +1,8 @@
+/* TAILWIND INJECTIONS WITHOUT PREFLIGHT */
+@tailwind components;
+@tailwind utilities;
+
+/* -- OLD STYLES BEGIN -- */
 :root {
   --primary: #00ff88;
   --primary-dark: #00cc6d;
@@ -112,4 +117,24 @@ input:focus {
   background: linear-gradient(135deg, var(--primary), var(--secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+/* -- OLD STYLES END -- */
+
+/* -- NEW STYLES (LANDING PAGE EXCLUSIVE) -- */
+@layer components {
+  .glass-panel {
+    @apply bg-glass-gradient backdrop-blur-xl border border-dark-border shadow-2xl;
+  }
+  
+  .text-gold-glow {
+    @apply text-transparent bg-clip-text bg-gold-gradient drop-shadow-[0_0_15px_rgba(212,175,55,0.4)];
+  }
+
+  .btn-gold {
+    @apply relative overflow-hidden bg-gold-gradient text-dark font-semibold px-6 py-3 rounded-lg transition-all duration-300 hover:shadow-[0_0_20px_rgba(242,202,80,0.5)] hover:-translate-y-1;
+  }
+
+  .btn-glass {
+    @apply relative overflow-hidden glass-panel text-white font-semibold px-6 py-3 rounded-lg transition-all duration-300 hover:border-gold/50 hover:bg-white/10;
+  }
 }

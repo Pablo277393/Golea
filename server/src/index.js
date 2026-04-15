@@ -1,3 +1,4 @@
+process.on('exit', (code) => console.log('process.exit called with code:', code));
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -47,3 +48,4 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+setInterval(() => {}, 100000);
