@@ -1,128 +1,139 @@
--- Golea Database Schema (PostgreSQL)
-
--- Roles: coach, player, parent, admin, superadmin
-CREATE TYPE user_role AS ENUM ('coach', 'player', 'parent', 'admin', 'superadmin');
-CREATE TYPE event_type AS ENUM ('match', 'training');
-CREATE TYPE notification_type AS ENUM ('informative', 'match', 'training');
-CREATE TYPE callup_status AS ENUM ('called', 'injured', 'unavailable', 'standby');
+-- Activar claves foráneas
+PRAGMA foreign_keys = ON;
 
 -- Users table
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    username VARCHAR(100) UNIQUE NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    role user_role NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('coach','player','parent','admin','superadmin')),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Profiles table
 CREATE TABLE profiles (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    phone VARCHAR(20),
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE,
+    first_name TEXT,
+    last_name TEXT,
+    phone TEXT,
     bio TEXT,
-    avatar_url TEXT
+    avatar_url TEXT,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Family relations (Parent-Child)
+-- Family relations
 CREATE TABLE family_relations (
-    id SERIAL PRIMARY KEY,
-    parent_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    child_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT unique_relation UNIQUE(parent_id, child_id)
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER,
+    child_id INTEGER,
+    UNIQUE(parent_id, child_id),
+    FOREIGN KEY(parent_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(child_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Teams table
 CREATE TABLE teams (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    category VARCHAR(50),
-    coach_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    category TEXT,
+    coach_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(coach_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- Team Rosters (Players in teams)
+-- Team players
 CREATE TABLE team_players (
-    id SERIAL PRIMARY KEY,
-    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
-    player_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER,
+    player_id INTEGER,
     jersey_number INTEGER,
-    position VARCHAR(20),
-    CONSTRAINT unique_player_team UNIQUE(team_id, player_id)
+    position TEXT,
+    UNIQUE(team_id, player_id),
+    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY(player_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Matches table
+-- Matches
 CREATE TABLE matches (
-    id SERIAL PRIMARY KEY,
-    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
-    opponent VARCHAR(100) NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER,
+    opponent TEXT NOT NULL,
     match_date DATE NOT NULL,
     match_time TIME NOT NULL,
     departure_time TIME,
-    location VARCHAR(255),
+    location TEXT,
     home_score INTEGER,
     away_score INTEGER,
-    is_home BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    is_home INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
--- Trainings table
+-- Trainings
 CREATE TABLE trainings (
-    id SERIAL PRIMARY KEY,
-    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER,
     training_date DATE NOT NULL,
     training_time TIME NOT NULL,
-    location VARCHAR(255),
+    location TEXT,
     description TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
--- Call-ups table (for matches and trainings)
+-- Callups
 CREATE TABLE callups (
-    id SERIAL PRIMARY KEY,
-    event_type event_type NOT NULL,
-    event_id INTEGER NOT NULL, -- References matches(id) or trainings(id)
-    player_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    status callup_status DEFAULT 'called',
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL CHECK(event_type IN ('match','training')),
+    event_id INTEGER NOT NULL,
+    player_id INTEGER,
+    status TEXT DEFAULT 'called' CHECK(status IN ('called','injured','unavailable','standby')),
     technical_note TEXT,
-    UNIQUE(event_type, event_id, player_id)
+    UNIQUE(event_type, event_id, player_id),
+    FOREIGN KEY(player_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Notifications table
+-- Notifications
 CREATE TABLE notifications (
-    id SERIAL PRIMARY KEY,
-    sender_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    recipient_id INTEGER REFERENCES users(id) ON DELETE CASCADE, -- Null if team/global
-    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE, -- Null if individual/global
-    scope VARCHAR(20) DEFAULT 'individual', -- individual, team, global
-    type notification_type DEFAULT 'informative',
-    title VARCHAR(255) NOT NULL,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER,
+    recipient_id INTEGER,
+    team_id INTEGER,
+    scope TEXT DEFAULT 'individual',
+    type TEXT DEFAULT 'informative' CHECK(type IN ('informative','match','training')),
+    title TEXT NOT NULL,
     message TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY(recipient_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
--- Predictions table
+-- Predictions
 CREATE TABLE predictions (
-    id SERIAL PRIMARY KEY,
-    match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    match_id INTEGER,
+    user_id INTEGER,
     predicted_home_score INTEGER NOT NULL,
     predicted_away_score INTEGER NOT NULL,
     points_earned INTEGER DEFAULT 0,
-    UNIQUE(match_id, user_id)
+    UNIQUE(match_id, user_id),
+    FOREIGN KEY(match_id) REFERENCES matches(id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- MVP Weekly
+-- Weekly MVPs
 CREATE TABLE weekly_mvps (
-    id SERIAL PRIMARY KEY,
-    team_id INTEGER REFERENCES teams(id) ON DELETE CASCADE,
-    player_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    team_id INTEGER,
+    player_id INTEGER,
     week_number INTEGER NOT NULL,
     year INTEGER NOT NULL,
     votes_count INTEGER DEFAULT 0,
-    UNIQUE(team_id, week_number, year)
+    UNIQUE(team_id, week_number, year),
+    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY(player_id) REFERENCES users(id) ON DELETE CASCADE
 );

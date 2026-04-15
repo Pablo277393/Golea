@@ -43,34 +43,6 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { email, password } = req.body;
 
-  // Production-like Test Users Bypass
-  const demoUsers = [
-    { email: 'superadmin@gmail.com', password: 'super123admin', role: 'superadmin', name: 'Golea Superadmin' },
-    { email: 'jugador@gmail.com', password: 'jugador123', role: 'player', name: 'Golea Jugador' },
-    { email: 'padre@gmail.com', password: 'padre123', role: 'parent', name: 'Golea Padre' },
-    { email: 'coach@gmail.com', password: 'coach123', role: 'coach', name: 'Golea Coach' },
-    { email: 'admin@gmail.com', password: 'admin123', role: 'admin', name: 'Golea Admin' },
-  ];
-
-  const demoUser = demoUsers.find(u => u.email.toLowerCase() === email?.toLowerCase() && u.password === password);
-
-  if (demoUser) {
-    const token = jwt.sign(
-      { id: Date.now(), username: demoUser.name, role: demoUser.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-    return res.json({
-      token,
-      user: {
-        id: Date.now(),
-        username: demoUser.name,
-        email: demoUser.email,
-        role: demoUser.role
-      }
-    });
-  }
-
   try {
     const userResult = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (userResult.rows.length === 0) {
