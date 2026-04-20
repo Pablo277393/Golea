@@ -162,12 +162,37 @@ const Dashboard = () => {
 
       {/* Main Content */}
       <main className="relative z-10 pt-28 pb-12 transition-all duration-500">
-        <Container>
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {React.cloneElement(renderView(), { onViewChange: handleSelectView })}
+        <div className="flex justify-center items-start gap-6 px-6 max-w-[1920px] mx-auto">
+          {/* Left Skyscraper - Desktop Only */}
+          <aside className="hidden lg:block shrink-0">
+            <AdBanner variant="desktop" className="rounded-3xl" />
+          </aside>
+
+          {/* Central Content */}
+          <div className="flex-1 w-full min-w-0">
+            <Container className="px-0 relative px-2">
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                {React.cloneElement(renderView(), { onViewChange: handleSelectView })}
+              </div>
+
+              {/* Inline Bottom Ad for Mobile/Content transitions */}
+              <div className="mt-12 lg:hidden">
+                <AdBanner variant="mobile" className="rounded-3xl" />
+              </div>
+            </Container>
           </div>
-        </Container>
+
+          {/* Right Skyscraper - Desktop Only */}
+          <aside className="hidden xl:block shrink-0">
+            <AdBanner variant="desktop" className="rounded-3xl" />
+          </aside>
+        </div>
       </main>
+
+      {/* Sticky Mobile Ad */}
+      <div className="lg:hidden">
+        <AdBanner variant="sticky" />
+      </div>
     </div>
   );
 };

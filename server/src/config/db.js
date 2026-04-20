@@ -28,20 +28,28 @@ const db = new sqlite3.Database(dbPath, (err) => {
  */
 const query = (text, params = []) => {
   return new Promise((resolve, reject) => {
-    // Translate $1, $2... to ?
-    const translatedText = text.replace(/\$(\d+)/g, '?');
+    // Correctly handle repeated positional placeholders ($1, $2, etc.)
+    // We need to map the sequential '?' to the indices provided in $n
+    const placeholders = [];
+    const translatedText = text.replace(/\$(\d+)/g, (match, p1) => {
+      placeholders.push(parseInt(p1) - 1);
+      return '?';
+    });
+
+    // Create a new params array that follows the sequential '?' order
+    const orderedParams = placeholders.map(index => params[index]);
     
     // Check if it's a SELECT query
     const isSelect = translatedText.trim().toUpperCase().startsWith('SELECT');
 
     if (isSelect) {
-      db.all(translatedText, params, (err, rows) => {
+      db.all(translatedText, orderedParams, (err, rows) => {
         if (err) return reject(err);
         resolve({ rows: rows || [] });
       });
     } else {
       // For INSERT, UPDATE, DELETE
-      db.run(translatedText, params, function(err) {
+      db.run(translatedText, orderedParams, function(err) {
         if (err) return reject(err);
         
         // SQLite RETURNING support is available in 3.35+
