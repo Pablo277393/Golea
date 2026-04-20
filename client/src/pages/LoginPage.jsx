@@ -66,6 +66,23 @@ const LoginPage = () => {
           </button>
         </form>
 
+        <div style={{ textAlign: 'center' }}>
+          <button
+            onClick={() => navigate('/')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              fontSize: '0.875rem'
+            }}
+          >
+            Volver
+          </button>
+        </div>
       </div>
     </div>
   );

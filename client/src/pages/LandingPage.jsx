@@ -81,9 +81,6 @@ const LandingPage = () => {
               <button className="btn-gold w-full sm:w-auto text-lg flex items-center justify-center gap-2">
                 Contacta con nosotros <ArrowRight className="w-5 h-5" />
               </button>
-              <button className="btn-glass w-full sm:w-auto text-lg">
-                Explorar Privilegios
-              </button>
             </div>
           </div>
         </section>
