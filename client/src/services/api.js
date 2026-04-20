@@ -18,12 +18,21 @@ export const authService = {
   login: (credentials) => api.post('/auth/login', credentials),
   register: (userData) => api.post('/auth/register', userData),
   getMe: () => api.get('/users/me'),
+  getUsersByRole: (role) => api.get('/users', { params: { role } }),
+  createUser: (userData) => api.post('/users', userData),
+  updateUser: (id, userData) => api.put(`/users/${id}`, userData),
+  deleteUser: (id) => api.delete(`/users/${id}`),
 };
 
 export const teamService = {
   getTeams: () => api.get('/teams'),
   getTeam: (id) => api.get(`/teams/${id}`),
   createTeam: (data) => api.post('/teams', data),
+  updateTeam: (id, data) => api.put(`/teams/${id}`, data),
+  deleteTeam: (id) => api.delete(`/teams/${id}`),
+  getTeamPlayers: (id) => api.get(`/teams/${id}/players`),
+  addPlayerToTeam: (teamId, playerData) => api.post(`/teams/${teamId}/players`, playerData),
+  removePlayerFromTeam: (teamId, playerId) => api.delete(`/teams/${teamId}/players/${playerId}`),
 };
 
 export const matchService = {

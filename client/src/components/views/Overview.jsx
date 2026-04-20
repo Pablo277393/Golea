@@ -44,41 +44,8 @@ const Overview = ({ onViewChange }) => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {/* Navigation Cards */}
-        <Card 
-          className="border-primary/20 hover:border-primary/50 cursor-pointer bg-gold-gradient/5 transition-all group lg:col-span-1"
-          onClick={() => onViewChange?.('Calendario')}
-        >
-          <div className="flex items-center gap-4 mb-4">
-             <div className="p-3 rounded-xl bg-primary/20 text-primary">
-                <Calendar size={24} />
-             </div>
-             <h3 className="text-xl font-bold group-hover:text-primary transition-colors">Calendario</h3>
-          </div>
-          <p className="text-slate-400 text-sm mb-6">Gestiona tus próximos partidos, entrenamientos y eventos del club.</p>
-          <Button variant="ghost" className="p-0 text-primary group-hover:gap-3 transition-all" icon={ArrowRight}>
-             Explorar Agenda
-          </Button>
-        </Card>
-
-        <Card 
-          className="border-white/5 hover:border-primary/30 cursor-pointer transition-all group lg:col-span-1"
-          onClick={() => onViewChange?.('Equipos')}
-        >
-          <div className="flex items-center gap-4 mb-4">
-             <div className="p-3 rounded-xl bg-white/5 text-slate-400 group-hover:text-primary transition-colors">
-                <ArrowRight size={24} />
-             </div>
-             <h3 className="text-xl font-bold group-hover:text-primary transition-colors">Equipos</h3>
-          </div>
-          <p className="text-slate-400 text-sm mb-6">Visualiza las plantillas, cuerpo técnico y estadísticas de los jugadores.</p>
-          <Button variant="ghost" className="p-0 text-slate-400 group-hover:text-primary group-hover:gap-3 transition-all" icon={ArrowRight}>
-             Ver Plantillas
-          </Button>
-        </Card>
-
         {/* Next Match Card */}
-        <Card className="flex flex-col lg:col-span-1">
+        <Card className="flex flex-col">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
               <Calendar size={20} className="text-primary" />
@@ -94,9 +61,13 @@ const Overview = ({ onViewChange }) => {
               <h4 className="text-2xl font-bold mb-2">Golea FC</h4>
               <p className="text-slate-500 font-bold text-sm mb-2">VS</p>
               <h4 className="text-2xl font-bold mb-6">{nextMatch.opponent}</h4>
+              <p className="text-xs font-bold text-slate-400 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                {nextMatch.location}
+              </p>
               
-              <Button variant="outline" className="w-full py-3" onClick={() => onViewChange?.('Calendario')} icon={ArrowRight}>
-                Detalles
+              <Button variant="outline" className="mt-8 w-full py-3" onClick={() => onViewChange?.('Calendario')} icon={ArrowRight}>
+                Ver Detalles
               </Button>
             </div>
           ) : (
@@ -120,6 +91,7 @@ const Overview = ({ onViewChange }) => {
               <div 
                 key={i} 
                 className="group flex gap-4 p-4 rounded-2xl bg-white/5 border border-white/5 hover:border-primary/20 hover:bg-white/10 transition-all cursor-pointer"
+                onClick={() => onViewChange?.('Notificaciones')}
               >
                 <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-dark flex items-center justify-center border border-white/5">
                   <Info size={16} className="text-slate-400 group-hover:text-primary transition-colors" />
