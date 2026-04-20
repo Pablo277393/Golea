@@ -10,7 +10,8 @@ import {
   ClipboardList,
   Target,
   Menu,
-  X
+  X,
+  Megaphone
 } from 'lucide-react';
 import Overview from '../components/views/Overview';
 import TeamsView from '../components/views/TeamsView';
@@ -19,6 +20,8 @@ import NotificationsView from '../components/views/NotificationsView';
 import CallupsView from '../components/views/CallupsView';
 import PredictionsView from '../components/views/PredictionsView';
 import MVPView from '../components/views/MVPView';
+import AdsAdminView from '../components/views/AdsAdminView';
+import AdBanner from '../components/ads/AdBanner';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Container from '../components/ui/Container';
@@ -36,6 +39,7 @@ const Dashboard = () => {
     { icon: <Target size={20} />, label: 'Quiniela', roles: ['player', 'parent', 'superadmin'] },
     { icon: <Bell size={20} />, label: 'Notificaciones', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
     { icon: <Trophy size={20} />, label: 'MVP Semanal', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
+    { icon: <Megaphone size={20} />, label: 'Gestión Publicidad', roles: ['superadmin'] },
   ];
 
   const filteredMenu = menuItems.filter(item => {
@@ -56,7 +60,8 @@ const Dashboard = () => {
       'Notificaciones': <NotificationsView />,
       'Convocatorias': <CallupsView />,
       'Quiniela': <PredictionsView />,
-      'MVP Semanal': <MVPView />
+      'MVP Semanal': <MVPView />,
+      'Gestión Publicidad': <AdsAdminView />
     };
     
     return viewMap[activeView] || <Overview />;
@@ -139,6 +144,11 @@ const Dashboard = () => {
           >
             Cerrar Sesión
           </Button>
+
+          {/* Sponsored Ad Banner */}
+          <div className="mt-6">
+             <AdBanner />
+          </div>
         </div>
       </div>
 

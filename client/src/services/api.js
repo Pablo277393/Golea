@@ -61,6 +61,21 @@ export const gamificationService = {
   voteMVP: (data) => api.post('/gamification/mvp/vote', data),
 };
 
+export const adService = {
+  getRandomAd: () => api.get('/ads'),
+  trackClick: (id) => api.post(`/ads/${id}/click`),
+  trackImpression: (id) => api.post(`/ads/${id}/impression`),
+  // Admin Only
+  getAllAds: () => api.get('/ads/all'),
+  createAd: (formData) => api.post('/ads', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  updateAd: (id, formData) => api.put(`/ads/${id}`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  deleteAd: (id) => api.delete(`/ads/${id}`),
+};
+
 export const familyService = {
   getChildren: () => api.get('/family/children'),
   addChild: (data) => api.post('/family/add-child', data),
