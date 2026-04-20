@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Users, Plus, ArrowLeft, UserCircle } from 'lucide-react';
+import { Users, Plus, ArrowLeft, UserCircle, Shield, Briefcase, ArrowRight } from 'lucide-react';
+import Card from '../ui/Card';
+import Button from '../ui/Button';
 
 const TeamsView = () => {
   const { user } = useAuth();
@@ -22,85 +24,121 @@ const TeamsView = () => {
   if (selectedTeam) {
     const teamPlayers = players.filter(p => p.teamId === selectedTeam.id);
     return (
-      <div>
-        <button 
-          onClick={() => setSelectedTeam(null)} 
-          className="btn btn-outline" 
-          style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+      <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+        <Button 
+          variant="secondary" 
+          className="px-4 py-2 text-sm" 
+          onClick={() => setSelectedTeam(null)}
+          icon={ArrowLeft}
         >
-          <ArrowLeft size={18} /> Volver a Equipos
-        </button>
+          Volver a Equipos
+        </Button>
 
-        <header style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: '800' }}>Plantilla: <span className="text-gradient">{selectedTeam.name}</span></h2>
-          <p style={{ color: 'var(--text-muted)' }}>Mánager: {selectedTeam.coach} • {teamPlayers.length} Jugadores</p>
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 className="text-4xl font-bold tracking-tight mb-2">
+              Plantilla: <span className="text-gold-glow">{selectedTeam.name}</span>
+            </h2>
+            <div className="flex items-center gap-4 text-slate-400 font-medium">
+              <span className="flex items-center gap-1.5"><Briefcase size={14} className="text-primary" /> {selectedTeam.coach}</span>
+              <span className="w-1 h-1 rounded-full bg-slate-600"></span>
+              <span className="flex items-center gap-1.5"><Users size={14} className="text-primary" /> {teamPlayers.length} Jugadores</span>
+            </div>
+          </div>
         </header>
 
-        <div className="glass-card" style={{ padding: '0' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>
-                <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Dorsal</th>
-                <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Nombre</th>
-                <th style={{ padding: '1rem 1.5rem', color: 'var(--text-muted)', fontSize: '0.75rem', textTransform: 'uppercase' }}>Posición</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teamPlayers.map(p => (
-                <tr key={p.id} style={{ borderBottom: '1px solid var(--border)', transition: 'var(--transition)' }}>
-                  <td style={{ padding: '1rem 1.5rem', fontWeight: '800', color: 'var(--primary)' }}>#{p.number}</td>
-                  <td style={{ padding: '1rem 1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <UserCircle size={24} className="text-muted" /> {p.name}
-                  </td>
-                  <td style={{ padding: '1rem 1.5rem' }}>
-                    <span style={{ padding: '0.25rem 0.75rem', background: 'var(--glass)', borderRadius: '1rem', fontSize: '0.75rem' }}>{p.position}</span>
-                  </td>
+        <Card className="p-0 overflow-hidden border-white/5" hover={false}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead className="bg-white/5">
+                <tr className="text-left border-b border-white/5">
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Dorsal</th>
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Nombre del Jugador</th>
+                  <th className="px-8 py-5 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Especialidad</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {teamPlayers.map(p => (
+                  <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="px-8 py-6 font-bold text-xl text-white group-hover:text-primary transition-colors">#{p.number}</td>
+                    <td className="px-8 py-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                          <UserCircle size={20} className="text-primary" />
+                        </div>
+                        <span className="font-bold text-slate-200">{p.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-8 py-6">
+                      <span className="px-4 py-1.5 bg-primary/10 border border-primary/20 text-primary rounded-full text-[10px] font-bold uppercase tracking-widest">
+                        {p.position}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {teamPlayers.length === 0 && (
-            <p style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No hay jugadores registrados en este equipo.</p>
+            <div className="p-20 text-center text-slate-500 font-medium italic">
+              No hay jugadores registrados en este equipo aún.
+            </div>
           )}
-        </div>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Gestión de Equipos</h2>
-        {user?.role === 'superadmin' && (
-          <button className="btn btn-primary"><Plus size={18} /> Crear Equipo</button>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
+        <div>
+          <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Gestión de Equipos</h2>
+          <p className="text-slate-400 font-medium">Control total sobre las plantillas y el staff técnico.</p>
+        </div>
+        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+          <Button variant="primary" icon={Plus} className="px-6 py-3 w-full sm:w-auto">
+            Crear Equipo
+          </Button>
         )}
-      </div>
+      </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {teams.map(team => (
-          <div key={team.id} className="glass-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-              <div style={{ width: '40px', height: '40px', background: 'var(--primary)', borderRadius: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Users size={24} color="var(--bg-darker)" />
+          <Card key={team.id} className="group">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-14 h-14 rounded-2xl bg-gold-gradient p-[1px] shadow-gold-glow group-hover:scale-110 transition-transform">
+                <div className="w-full h-full rounded-2xl bg-dark flex items-center justify-center">
+                  <Shield size={28} className="text-primary" />
+                </div>
               </div>
               <div>
-                <h4 style={{ fontWeight: '700' }}>{team.name}</h4>
-                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{team.category}</p>
+                <h4 className="text-xl font-bold text-white group-hover:text-primary-light transition-colors">{team.name}</h4>
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">{team.category}</p>
               </div>
             </div>
             
-            <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>
-              <p>Entrenador: {team.coach}</p>
+            <div className="space-y-3 mb-8">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Entrenador Principal</span>
+                <span className="text-slate-300 font-bold">{team.coach}</span>
+              </div>
+              <div className="w-full h-px bg-white/5"></div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500">Disponibilidad</span>
+                <span className="text-primary font-bold">Activo</span>
+              </div>
             </div>
 
-            <button 
+            <Button 
+              variant="secondary" 
+              className="w-full py-4 rounded-xl"
               onClick={() => setSelectedTeam(team)}
-              className="btn btn-outline" 
-              style={{ width: '100%', marginTop: '1.5rem' }}
+              icon={ArrowRight}
             >
               Ver Plantilla
-            </button>
-          </div>
+            </Button>
+          </Card>
         ))}
       </div>
     </div>

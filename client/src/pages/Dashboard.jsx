@@ -19,6 +19,9 @@ import NotificationsView from '../components/views/NotificationsView';
 import CallupsView from '../components/views/CallupsView';
 import PredictionsView from '../components/views/PredictionsView';
 import MVPView from '../components/views/MVPView';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Container from '../components/ui/Container';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -35,7 +38,10 @@ const Dashboard = () => {
     { icon: <Trophy size={20} />, label: 'MVP Semanal', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
   ];
 
-  const filteredMenu = menuItems.filter(item => item.roles.includes(user?.role));
+  const filteredMenu = menuItems.filter(item => {
+    const userRole = user?.role?.toLowerCase();
+    return item.roles.includes(userRole);
+  });
 
   const handleSelectView = (label) => {
     setActiveView(label);
@@ -43,116 +49,96 @@ const Dashboard = () => {
   };
 
   const renderView = () => {
-    switch (activeView) {
-      case 'Resumen': return <Overview />;
-      case 'Equipos': return <TeamsView />;
-      case 'Calendario': return <ScheduleView />;
-      case 'Notificaciones': return <NotificationsView />;
-      case 'Convocatorias': return <CallupsView />;
-      case 'Quiniela': return <PredictionsView />;
-      case 'MVP Semanal': return <MVPView />;
-      default: return <Overview />;
-    }
+    const viewMap = {
+      'Resumen': <Overview />,
+      'Equipos': <TeamsView />,
+      'Calendario': <ScheduleView />,
+      'Notificaciones': <NotificationsView />,
+      'Convocatorias': <CallupsView />,
+      'Quiniela': <PredictionsView />,
+      'MVP Semanal': <MVPView />
+    };
+    
+    return viewMap[activeView] || <Overview />;
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-darker)' }}>
+    <div className="min-h-screen bg-dark overflow-x-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-5%] left-[-5%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/5 blur-[120px]" />
+      </div>
+
       {/* Topbar */}
-      <header style={{ 
-        position: 'fixed', 
-        top: 0, 
-        left: 0, 
-        right: 0, 
-        height: '70px', 
-        background: 'rgba(10, 11, 20, 0.8)', 
-        backdropFilter: 'blur(10px)', 
-        borderBottom: '1px solid var(--border)', 
-        display: 'flex', 
-        alignItems: 'center', 
-        padding: '0 1.5rem', 
-        zIndex: 100,
-        justifyContent: 'space-between'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button 
+      <header className="fixed top-0 left-0 right-0 h-20 bg-dark/60 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 z-[100] shadow-glass">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="secondary" 
+            className="p-3 bg-white/5 border-white/10 rounded-xl"
             onClick={() => setIsMenuOpen(true)}
-            style={{ 
-              background: 'var(--glass)', 
-              border: '1px solid var(--border)', 
-              color: 'var(--text-main)', 
-              padding: '0.5rem', 
-              borderRadius: '0.5rem', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <Menu size={24} />
-          </button>
-          <h2 className="text-gradient" style={{ fontWeight: '800', fontSize: '1.5rem', marginLeft: '0.5rem' }}>Golea</h2>
+            icon={Menu}
+          />
+          <h2 className="text-2xl font-bold tracking-tight">
+            Golea <span className="text-primary text-xs uppercase tracking-widest ml-2 hidden sm:inline-block">Elite</span>
+          </h2>
         </div>
         
-        <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span>{user?.username} ({user?.role})</span>
+        <div className="flex items-center gap-6">
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-sm font-semibold text-white">{user?.username}</span>
+            <span className="text-[10px] uppercase tracking-widest text-primary font-bold">{user?.role}</span>
+          </div>
+          <div className="w-10 h-10 rounded-xl bg-gold-gradient p-[1px]">
+            <div className="w-full h-full rounded-xl bg-dark-card flex items-center justify-center text-primary font-bold text-lg">
+              {user?.username?.charAt(0).toUpperCase()}
+            </div>
+          </div>
         </div>
       </header>
 
-      {/* Drawer Menu */}
+      {/* Sidebar Drawer */}
       <div 
-        style={{ 
-          position: 'fixed', 
-          top: 0, 
-          left: isMenuOpen ? '0' : '-300px', 
-          width: '280px', 
-          height: '100vh', 
-          background: 'rgba(13, 14, 25, 0.98)', 
-          zIndex: 200, 
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', 
-          boxShadow: '10px 0 30px rgba(0,0,0,0.5)',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
+        className={`fixed inset-y-0 left-0 w-80 bg-surface/98 backdrop-blur-2xl z-[200] transition-transform duration-500 ease-out shadow-glass border-r border-white/5 flex flex-col ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        <div style={{ padding: '2rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
-          <h2 className="text-gradient" style={{ fontWeight: '800' }}>Golea</h2>
-          <button 
+        <div className="p-8 flex justify-between items-center border-b border-white/5">
+          <h2 className="text-4xl lg:text-5xl font-bold tracking-tighter">Golea</h2>
+          <Button 
+            variant="ghost" 
             onClick={() => setIsMenuOpen(false)}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            <X size={24} />
-          </button>
+            icon={X}
+            className="p-2"
+          />
         </div>
 
-        <nav style={{ flex: 1, padding: '1.5rem 1rem' }}>
+        <nav className="flex-1 p-6 space-y-2 overflow-y-auto">
           {filteredMenu.map((item, index) => (
             <div 
               key={index} 
               onClick={() => handleSelectView(item.label)}
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '1rem', 
-                padding: '0.85rem 1rem', 
-                borderRadius: '0.75rem', 
-                cursor: 'pointer',
-                marginBottom: '0.5rem',
-                color: activeView === item.label ? 'var(--primary)' : 'var(--text-muted)',
-                background: activeView === item.label ? 'rgba(0, 255, 136, 0.1)' : 'transparent',
-                transition: 'var(--transition)',
-                borderLeft: activeView === item.label ? '3px solid var(--primary)' : '3px solid transparent'
-              }}
+              className={`flex items-center gap-4 px-6 py-4 rounded-2xl cursor-pointer transition-all duration-300 group ${
+                activeView === item.label 
+                ? 'bg-primary/10 text-primary border-l-4 border-primary shadow-gold-glow' 
+                : 'text-slate-400 hover:text-white hover:bg-white/5 border-l-4 border-transparent'
+              }`}
             >
-              {item.icon}
-              <span style={{ fontWeight: '600' }}>{item.label}</span>
+              <div className={`${activeView === item.label ? 'scale-110' : 'group-hover:scale-110'} transition-transform`}>
+                {item.icon}
+              </div>
+              <span className="font-bold tracking-wide uppercase text-xs">{item.label}</span>
             </div>
           ))}
         </nav>
 
-        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', background: 'rgba(0,0,0,0.2)' }}>
-          <button onClick={logout} className="btn btn-outline" style={{ width: '100%', justifyContent: 'center', gap: '0.5rem' }}>
-            <LogOut size={20} /> Cerrar Sesión
-          </button>
+        <div className="p-6 border-t border-white/5 bg-black/20">
+          <Button 
+            variant="outline" 
+            className="w-full justify-center py-4 rounded-2xl border-white/10 text-slate-400 hover:text-red-400 hover:border-red-400/30 hover:bg-red-500/5"
+            onClick={logout}
+            icon={LogOut}
+          >
+            Cerrar Sesión
+          </Button>
         </div>
       </div>
 
@@ -160,27 +146,17 @@ const Dashboard = () => {
       {isMenuOpen && (
         <div 
           onClick={() => setIsMenuOpen(false)}
-          style={{ 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            right: 0, 
-            bottom: 0, 
-            background: 'rgba(0,0,0,0.6)', 
-            backdropFilter: 'blur(4px)', 
-            zIndex: 150 
-          }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] transition-opacity duration-300"
         />
       )}
 
       {/* Main Content */}
-      <main style={{ 
-        padding: '100px 1.5rem 2.5rem 1.5rem', 
-        minHeight: '100vh',
-        maxWidth: '1200px',
-        margin: '0 auto'
-      }}>
-        {renderView()}
+      <main className="relative z-10 pt-28 pb-12 transition-all duration-500">
+        <Container>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+            {React.cloneElement(renderView(), { onViewChange: handleSelectView })}
+          </div>
+        </Container>
       </main>
     </div>
   );
