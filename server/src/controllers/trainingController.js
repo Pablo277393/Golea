@@ -2,12 +2,21 @@ const db = require('../config/db');
 
 exports.getTrainings = async (req, res) => {
   try {
-    const result = await db.query(`
+    let query = `
       SELECT tr.*, t.name as team_name 
       FROM trainings tr 
       JOIN teams t ON tr.team_id = t.id 
-      ORDER BY tr.training_date DESC, tr.training_time DESC
-    `);
+    `;
+    const params = [];
+
+    if (req.user.role === 'coach') {
+      query += ` WHERE t.coach_id = $1 `;
+      params.push(req.user.id);
+    }
+
+    query += ` ORDER BY tr.training_date DESC, tr.training_time DESC `;
+
+    const result = await db.query(query, params);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching trainings' });

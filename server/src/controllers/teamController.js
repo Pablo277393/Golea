@@ -2,15 +2,22 @@ const db = require('../config/db');
 
 exports.getTeams = async (req, res) => {
   try {
-    // Join with profiles to get coach name
-    const sql = `
+    let sql = `
       SELECT t.*, p.first_name || ' ' || p.last_name as coach_name 
       FROM teams t
       LEFT JOIN users u ON t.coach_id = u.id
       LEFT JOIN profiles p ON u.id = p.user_id
-      ORDER BY t.name
     `;
-    const result = await db.query(sql);
+    const params = [];
+
+    if (req.user.role === 'coach') {
+      sql += ` WHERE t.coach_id = $1 `;
+      params.push(req.user.id);
+    }
+
+    sql += ` ORDER BY t.name `;
+
+    const result = await db.query(sql, params);
     res.json(result.rows);
   } catch (err) {
     console.error(err);

@@ -64,10 +64,10 @@ const LoginPage = () => {
               <label className="text-[#d3c5ac] text-xs uppercase tracking-widest font-semibold ml-1" htmlFor="email">
                 Identificador de Usuario
               </label>
-              <div className="relative group">
-                <User size={20} className="absolute left-0 bottom-3 text-[#e2c380]" />
+              <div className="relative group flex items-center">
+                <User size={18} className="absolute left-3 text-[#e2c380] group-focus-within:text-[#ffd165] transition-colors" />
                 <input 
-                  className="w-full bg-[#353534]/30 border-b-2 border-[#4f4633] focus:border-[#ffd165] focus:outline-none text-[#e5e2e1] pl-8 pb-2 pt-2 transition-all duration-300 placeholder:text-[#d3c5ac]/30" 
+                  className="w-full bg-[#353534]/20 border-b-2 border-[#4f4633] focus:border-[#ffd165] focus:outline-none text-[#e5e2e1] pl-10 pr-4 py-3 transition-all duration-300 placeholder:text-[#d3c5ac]/30 hover:bg-white/5" 
                   id="email" 
                   type="email" 
                   value={email}
@@ -83,10 +83,10 @@ const LoginPage = () => {
               <label className="text-[#d3c5ac] text-xs uppercase tracking-widest font-semibold ml-1" htmlFor="password">
                 Clave de Acceso
               </label>
-              <div className="relative group">
-                <Lock size={20} className="absolute left-0 bottom-3 text-[#e2c380]" />
+              <div className="relative group flex items-center">
+                <Lock size={18} className="absolute left-3 text-[#e2c380] group-focus-within:text-[#ffd165] transition-colors" />
                 <input 
-                  className="w-full bg-[#353534]/30 border-b-2 border-[#4f4633] focus:border-[#ffd165] focus:outline-none text-[#e5e2e1] pl-8 pb-2 pt-2 transition-all duration-300 placeholder:text-[#d3c5ac]/30" 
+                  className="w-full bg-[#353534]/20 border-b-2 border-[#4f4633] focus:border-[#ffd165] focus:outline-none text-[#e5e2e1] pl-10 pr-12 py-3 transition-all duration-300 placeholder:text-[#d3c5ac]/30 hover:bg-white/5" 
                   id="password" 
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -97,9 +97,9 @@ const LoginPage = () => {
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-0 bottom-3 text-[#d3c5ac] hover:text-[#ffd165] transition-colors"
+                  className="absolute right-3 p-1.5 bg-black/60 text-[#ffd165] hover:text-[#f7be1d] transition-all hover:bg-black rounded-full border border-[#ffd165]/20 hover:border-[#ffd165]/50 flex items-center justify-center"
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
@@ -125,7 +125,7 @@ const LoginPage = () => {
 
           {/* Secondary Link */}
           <div className="mt-8 text-center">
-            <button className="text-[#d3c5ac] text-xs hover:text-[#f7be1d] transition-colors tracking-wide underline-offset-4 hover:underline">
+            <button className="inline-flex items-center px-4 py-2 bg-black/30 border border-[#ffd165]/10 text-[#ffd165] text-[10px] uppercase tracking-[0.2em] font-bold rounded-lg hover:bg-black/60 hover:border-[#ffd165]/40 transition-all group">
                ¿Ha olvidado su contraseña?
             </button>
           </div>

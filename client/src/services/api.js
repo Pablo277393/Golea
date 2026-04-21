@@ -38,7 +38,9 @@ export const teamService = {
 export const matchService = {
   getMatches: () => api.get('/matches'),
   createMatch: (data) => api.post('/matches', data),
+  publishMatch: (id) => api.patch(`/matches/${id}/publish`),
   updateScore: (id, scores) => api.patch(`/matches/${id}/score`, scores),
+  deleteMatch: (id) => api.delete(`/matches/${id}`),
 };
 
 export const trainingService = {
@@ -56,7 +58,9 @@ export const notificationService = {
 
 export const gamificationService = {
   getPredictions: () => api.get('/gamification/predictions'),
-  submitPrediction: (data) => api.post('/gamification/predictions', data),
+  getCombo: () => api.get('/gamification/combo'),
+  submitPredictions: (data) => api.post('/gamification/predictions', data),
+  getWeeklyPrize: () => api.get('/gamification/prizes/active'),
   getMVP: (teamId, week, year) => api.get(`/gamification/mvp/${teamId}/${week}/${year}`),
   voteMVP: (data) => api.post('/gamification/mvp/vote', data),
 };

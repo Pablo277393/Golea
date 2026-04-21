@@ -4,7 +4,7 @@ const notificationController = require('../controllers/notificationController');
 const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 
 router.get('/', authenticateToken, notificationController.getNotifications);
-router.post('/', authenticateToken, authorizeRoles('coach', 'admin'), notificationController.sendNotification);
+router.post('/', authenticateToken, authorizeRoles('coach', 'admin', 'superadmin'), notificationController.sendNotification);
 router.patch('/:id/read', authenticateToken, notificationController.markAsRead);
 
 module.exports = router;

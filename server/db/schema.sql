@@ -67,8 +67,13 @@ CREATE TABLE matches (
     home_score INTEGER,
     away_score INTEGER,
     is_home INTEGER DEFAULT 1,
+    published INTEGER DEFAULT 0,
+    convocation TEXT,
+    notes TEXT,
+    created_by INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE
+    FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Trainings
@@ -102,6 +107,7 @@ CREATE TABLE notifications (
     recipient_id INTEGER,
     team_id INTEGER,
     scope TEXT DEFAULT 'individual',
+    target_roles TEXT,
     type TEXT DEFAULT 'informative' CHECK(type IN ('informative','match','training')),
     title TEXT NOT NULL,
     message TEXT NOT NULL,
@@ -117,12 +123,22 @@ CREATE TABLE predictions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     match_id INTEGER,
     user_id INTEGER,
-    predicted_home_score INTEGER NOT NULL,
-    predicted_away_score INTEGER NOT NULL,
+    prediction TEXT CHECK(prediction IN ('LOCAL', 'EMPATE', 'VISITANTE')),
     points_earned INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(match_id, user_id),
     FOREIGN KEY(match_id) REFERENCES matches(id) ON DELETE CASCADE,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Weekly Prizes
+CREATE TABLE weekly_prizes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    sponsor_name TEXT,
+    active_week INTEGER NOT NULL,
+    year INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Weekly MVPs

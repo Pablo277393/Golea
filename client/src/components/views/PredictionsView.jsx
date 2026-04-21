@@ -1,129 +1,199 @@
-import React from 'react';
-import { Target, Award, Trophy, ChevronRight, Star } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Target, Award, Trophy, ChevronRight, Star, Clock, Gift, CheckCircle2 } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
+import { gamificationService } from '../../services/api';
 
 const PredictionsView = () => {
+  const [matches, setMatches] = useState([]);
+  const [prize, setPrize] = useState(null);
+  const [predictions, setPredictions] = useState({}); // { matchId: 'LOCAL' | 'EMPATE' | 'VISITANTE' }
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [comboRes, prizeRes, userPredsRes] = await Promise.all([
+          gamificationService.getCombo(),
+          gamificationService.getWeeklyPrize(),
+          gamificationService.getPredictions()
+        ]);
+        
+        setMatches(comboRes.data);
+        setPrize(prizeRes.data);
+        
+        // Map existing predictions
+        const predMap = {};
+        userPredsRes.data.forEach(p => {
+          predMap[p.match_id] = p.prediction;
+        });
+        setPredictions(predMap);
+      } catch (err) {
+        console.error('Error fetching quiniela data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const handleSelect = (matchId, value) => {
+    // Check if match is locked (1 hour before)
+    const match = matches.find(m => m.id === matchId);
+    if (isMatchLocked(match)) return;
+
+    setPredictions(prev => ({
+      ...prev,
+      [matchId]: value
+    }));
+    setSubmitted(false);
+  };
+
+  const isMatchLocked = (match) => {
+    if (!match) return true;
+    const matchDateTime = new Date(`${match.match_date}T${match.match_time}`);
+    const now = new Date();
+    const diffMs = matchDateTime - now;
+    const diffMins = diffMs / (1000 * 60);
+    return diffMins < 60;
+  };
+
+  const handleSubmit = async () => {
+    const predArray = Object.entries(predictions).map(([matchId, val]) => ({
+      match_id: parseInt(matchId),
+      prediction: val
+    }));
+
+    if (predArray.length < matches.length) {
+      alert('Por favor, complete todas las predicciones del combo.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await gamificationService.submitPredictions({ predictions: predArray });
+      setSubmitted(true);
+      alert('¡Triple predicción guardada con éxito!');
+    } catch (err) {
+      console.error('Error submitting predictions:', err);
+      alert('Error al guardar las predicciones.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-6xl mx-auto">
       <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
         <div>
-          <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Quiniela de Élite</h2>
-          <p className="text-slate-400 font-medium">Demuestre su visión estratégica y escale en el ranking global.</p>
+          <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Triple Desafío Elite</h2>
+          <p className="text-slate-400 font-medium tracking-wide">Acierta los 3 resultados para llevarte el premio de la semana.</p>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/20 rounded-full">
-           <Trophy size={16} className="text-primary" />
-           <span className="text-xs font-bold text-primary uppercase tracking-widest">850 Points</span>
-        </div>
+        {prize && (
+           <div className="flex items-center gap-4 px-6 py-3 bg-gold-gradient/[0.05] border border-primary/20 rounded-2xl animate-pulse">
+              <Gift size={20} className="text-primary" />
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Premio Semanal</span>
+                <span className="text-sm font-bold text-white uppercase">{prize.description}</span>
+              </div>
+           </div>
+        )}
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Prediction Card */}
-        <Card className="lg:col-span-2 p-8 shadow-glass" hover={false}>
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
-              <Target size={22} className="text-primary" />
-            </div>
-            <h3 className="text-xl font-bold uppercase tracking-wider text-white">Próximo Desafío</h3>
-          </div>
-
-          <div className="p-10 bg-white/5 rounded-3xl border border-white/5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <Target size={120} className="text-primary" />
-            </div>
-            
-            <div className="relative z-10 text-center">
-              <p className="text-xs font-bold text-primary uppercase tracking-[0.3em] mb-8">Liga Profesional • Jornada 24</p>
-              
-              <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-16 mb-12">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-dark flex items-center justify-center border border-white/10 shadow-glass">
-                    <span className="text-2xl font-bold text-white">GFC</span>
-                  </div>
-                  <span className="font-bold text-white">Golea FC</span>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <input 
-                    type="number" 
-                    defaultValue="0" 
-                    className="w-20 h-24 bg-dark-card border-2 border-white/10 rounded-2xl text-center text-4xl font-bold text-primary transition-all focus:border-primary focus:outline-none focus:shadow-gold-glow"
-                  />
-                  <span className="text-3xl font-extrabold text-slate-700">-</span>
-                  <input 
-                    type="number" 
-                    defaultValue="0" 
-                    className="w-20 h-24 bg-dark-card border-2 border-white/10 rounded-2xl text-center text-4xl font-bold text-primary transition-all focus:border-primary focus:outline-none focus:shadow-gold-glow"
-                  />
-                </div>
-
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-20 h-20 rounded-2xl bg-dark flex items-center justify-center border border-white/10 shadow-glass">
-                    <span className="text-2xl font-bold text-slate-400">GUN</span>
-                  </div>
-                  <span className="font-bold text-slate-300">Galaxy Utd</span>
+      <div className="max-w-3xl mx-auto space-y-6">
+        {/* Triple Challenge Section */}
+        {matches.map((match, idx) => {
+          const locked = isMatchLocked(match);
+          const selection = predictions[match.id];
+          
+          return (
+            <Card key={match.id} className="p-0 overflow-hidden border-white/5 bg-white/[0.02]" hover={false}>
+              <div className="bg-white/5 px-6 py-3 flex justify-between items-center border-b border-white/5">
+                <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Desafío {idx + 1} • {match.team_name}</span>
+                <div className="flex items-center gap-2 text-slate-500 font-medium text-xs">
+                  <Clock size={14} />
+                  <span>{new Date(match.match_date).toLocaleDateString()} • {match.match_time.substring(0, 5)}</span>
                 </div>
               </div>
 
-              <Button variant="primary" className="w-full max-w-sm py-4 text-lg shadow-gold-glow">
-                Confirmar Predicción
-              </Button>
-            </div>
-          </div>
-          
-          <div className="mt-8 p-6 bg-primary/5 border border-primary/10 rounded-2xl">
-             <div className="flex gap-4 items-start">
-               <Star size={20} className="text-primary shrink-0 mt-1" />
-               <p className="text-sm text-slate-400 leading-relaxed">
-                 Las predicciones se cierran 1 hora antes del pitido inicial. Un acierto exacto otorga <span className="text-primary font-bold">100 puntos</span> extra en el ranking MVP global.
-               </p>
-             </div>
-          </div>
-        </Card>
-
-        {/* Global Ranking Card */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-3 mb-2 px-2">
-            <Award size={20} className="text-primary" />
-            <h3 className="text-xl font-bold uppercase tracking-wider text-white">Top Ranking</h3>
-          </div>
-          
-          <Card className="p-0 border-white/5 overflow-hidden" hover={false}>
-            <div className="divide-y divide-white/5">
-              {[1, 2, 3, 4, 5].map((pos) => (
-                <div 
-                  key={pos} 
-                  className={`px-6 py-5 flex items-center justify-between group hover:bg-white/5 transition-all cursor-pointer ${pos === 1 ? 'bg-primary/5' : ''}`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold border transition-colors ${
-                      pos === 1 ? 'bg-primary text-dark border-primary' : 'bg-white/5 text-slate-400 border-white/10'
-                    }`}>
-                      #{pos}
-                    </span>
-                    <div className="flex flex-col">
-                      <span className={`font-bold transition-colors ${pos === 1 ? 'text-white' : 'text-slate-300 group-hover:text-white'}`}>
-                        Usuario_Elite_{pos}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Premium Member</span>
-                    </div>
+              <div className="p-8">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
+                  <div className="flex-1 text-center md:text-right">
+                    <h4 className="text-lg font-bold text-white mb-1">{match.is_home ? match.team_name : match.opponent}</h4>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Local</p>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className={`font-bold transition-all ${pos === 1 ? 'text-primary scale-110' : 'text-slate-400 group-hover:text-primary'}`}>
-                      {2400 - pos*150} pts
-                    </span>
-                    {pos === 1 && <span className="text-[8px] text-primary/50 font-bold uppercase tracking-tighter">Leader</span>}
+
+                  <div className="flex items-center gap-2 px-4 py-2 bg-dark rounded-full border border-white/5 text-slate-700 font-black italic">
+                    VS
+                  </div>
+
+                  <div className="flex-1 text-center md:text-left">
+                    <h4 className="text-lg font-bold text-white mb-1">{match.is_home ? match.opponent : match.team_name}</h4>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Visitante</p>
                   </div>
                 </div>
-              ))}
-            </div>
-            
-            <div className="p-4 bg-white/5 border-t border-white/5">
-               <Button variant="ghost" className="w-full text-xs font-bold uppercase tracking-[0.2em]" icon={ChevronRight}>
-                 Ver Ranking Completo
-               </Button>
-            </div>
-          </Card>
+
+                <div className="grid grid-cols-3 gap-4">
+                  {['LOCAL', 'EMPATE', 'VISITANTE'].map((type) => (
+                    <button
+                      key={type}
+                      disabled={locked}
+                      onClick={() => handleSelect(match.id, type)}
+                      className={`py-4 rounded-xl border font-bold uppercase tracking-widest transition-all duration-300 relative overflow-hidden ${
+                        selection === type 
+                          ? 'bg-primary border-primary text-dark shadow-gold-glow scale-105 z-10'
+                          : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                      } ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className="text-sm">{type === 'EMPATE' ? 'X' : type === 'LOCAL' ? '1' : '2'}</span>
+                      <div className="text-[9px] mt-1 opacity-60">{type.substring(0, 3)}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              
+              {locked && (
+                <div className="bg-red-500/10 px-6 py-2 border-t border-red-500/20 text-center">
+                  <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Predicción Cerrada</span>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+
+        <div className="pt-6">
+          <Button 
+            variant="primary" 
+            className="w-full py-6 text-xl rounded-2xl shadow-gold-glow"
+            onClick={handleSubmit}
+            disabled={submitting || Object.keys(predictions).length < matches.length}
+            icon={submitted ? CheckCircle2 : Target}
+          >
+            {submitting ? 'Guardando...' : submitted ? 'Predicción Actualizada' : 'Confirmar Triple Predicción'}
+          </Button>
+          
+          <div className="mt-8 p-8 bg-primary/5 border border-primary/10 rounded-2xl">
+             <div className="flex gap-4 items-start">
+               <Star size={20} className="text-primary shrink-0 mt-1" />
+               <div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2">Reglas del Triple Desafío</h4>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Las combinadas incluyen el partido del <span className="text-white font-bold">Primer Equipo</span> y los compromisos de su categoría. Se requiere el acierto de los 3 resultados para optar al premio semanal. Las predicciones se cierran 1 hora antes de cada inicio.
+                  </p>
+               </div>
+             </div>
+          </div>
         </div>
       </div>
     </div>

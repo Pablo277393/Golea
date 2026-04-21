@@ -1,16 +1,88 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Bell, Send, User, Users, Globe, Info, Clock, CheckCircle2 } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
+import { notificationService } from '../../services/api';
 
 const NotificationsView = () => {
   const { user } = useAuth();
-  const [notifications] = useState([
-    { id: 1, title: 'Entrenamiento Actualizado', message: 'El entrenamiento de hoy se mueve al campo 2 para mejorar el drenaje tras las lluvias.', date: 'Hoy, 09:00', scope: 'team', type: 'training' },
-    { id: 2, title: 'Equipación Nueva', message: 'Ya están disponibles las nuevas equipaciones de entrenamiento en las oficinas del club.', date: 'Ayer, 18:30', scope: 'global', type: 'info' },
-  ]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    message: '',
+    scope: 'global',
+    target_roles: []
+  });
+
+  const roles = [
+    { id: 'coach', label: 'Cuerpo Técnico', icon: User },
+    { id: 'player', label: 'Jugadores', icon: Users },
+    { id: 'parent', label: 'Padres/Tutores', icon: Globe },
+    { id: 'admin', label: 'Administradores', icon: CheckCircle2 }
+  ];
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await notificationService.getNotifications();
+      setNotifications(res.data);
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const handleRoleToggle = (roleId) => {
+    setFormData(prev => ({
+      ...prev,
+      target_roles: prev.target_roles.includes(roleId)
+        ? prev.target_roles.filter(r => r !== roleId)
+        : [...prev.target_roles, roleId]
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.target_roles.length === 0 && formData.scope === 'global') {
+      // If none selected but global, we can send it or warn
+    }
+    
+    setSending(true);
+    try {
+      await notificationService.sendNotification({
+        ...formData,
+        target_roles: formData.target_roles.join(','),
+        type: 'informative'
+      });
+      setFormData({ title: '', message: '', scope: 'global', target_roles: [] });
+      alert('¡Notificación enviada con éxito!');
+      fetchNotifications();
+    } catch (err) {
+      console.error('Error sending notification:', err);
+      alert('Error al enviar la notificación. Inténtelo de nuevo.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleMarkRead = async (id) => {
+    try {
+      await notificationService.markAsRead(id);
+      fetchNotifications();
+    } catch (err) {
+      console.error('Error marking as read:', err);
+    }
+  };
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-6xl mx-auto">
@@ -31,41 +103,54 @@ const NotificationsView = () => {
           </div>
           
           <div className="space-y-4">
-            {notifications.map(n => (
-              <Card key={n.id} className={`p-8 border-l-4 ${n.type === 'training' ? 'border-l-primary' : 'border-l-slate-600'}`}>
-                <div className="flex flex-col md:flex-row justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${n.type === 'training' ? 'bg-primary/10 text-primary' : 'bg-slate-500/10 text-slate-400'}`}>
-                      {n.type === 'training' ? <Users size={18} /> : <Info size={18} />}
+            {loading ? (
+              <div className="flex justify-center p-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center p-12 text-slate-500 italic">
+                No tienes notificaciones pendientes.
+              </div>
+            ) : (
+              notifications.map(n => (
+                <Card key={n.id} className={`p-8 border-l-4 ${n.type === 'training' ? 'border-l-primary' : 'border-l-slate-600'}`}>
+                  <div className="flex flex-col md:flex-row justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${n.type === 'training' ? 'bg-primary/10 text-primary' : 'bg-slate-500/10 text-slate-400'}`}>
+                        {n.type === 'training' ? <Users size={18} /> : <Info size={18} />}
+                      </div>
+                      <h4 className="text-xl font-bold text-white">{n.title}</h4>
                     </div>
-                    <h4 className="text-xl font-bold text-white">{n.title}</h4>
+                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                      <Clock size={14} /> {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
                   </div>
-                  <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                    <Clock size={14} /> {n.date}
-                  </span>
-                </div>
-                
-                <p className="text-slate-400 leading-relaxed mb-6 font-medium">
-                  {n.message}
-                </p>
-                
-                <div className="flex items-center gap-4">
-                  <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                    n.scope === 'team' 
-                    ? 'bg-primary/5 text-primary border-primary/20' 
-                    : 'bg-slate-500/5 text-slate-400 border-slate-500/20'
-                  }`}>
-                    {n.scope === 'team' ? 'Alcance Equipo' : 'Difusión Global'}
-                  </span>
                   
-                  <div className="flex-1 h-px bg-white/5"></div>
+                  <p className="text-slate-400 leading-relaxed mb-6 font-medium">
+                    {n.message}
+                  </p>
                   
-                  <Button variant="ghost" className="text-xs py-1 px-3">
-                    Marcar como leído
-                  </Button>
-                </div>
-              </Card>
-            ))}
+                  <div className="flex items-center gap-4">
+                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
+                      n.scope === 'team' 
+                      ? 'bg-primary/5 text-primary border-primary/20' 
+                      : 'bg-slate-500/5 text-slate-400 border-slate-500/20'
+                    }`}>
+                      {n.target_roles ? `Para: ${n.target_roles}` : (n.scope === 'team' ? 'Alcance Equipo' : 'Difusión Global')}
+                    </span>
+                    
+                    {!n.is_read && (
+                      <>
+                        <div className="flex-1 h-px bg-white/5"></div>
+                        <Button variant="ghost" className="text-xs py-1 px-3" onClick={() => handleMarkRead(n.id)}>
+                          Marcar como leído
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </div>
 
@@ -78,10 +163,12 @@ const NotificationsView = () => {
             </div>
             
             <Card className="p-8 border-primary/20 bg-primary/[0.02]" hover={false}>
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <Input
                   label="Asunto"
                   placeholder="Título de la notificación..."
+                  value={formData.title}
+                  onChange={(e) => setFormData({...formData, title: e.target.value})}
                   required
                 />
 
@@ -91,26 +178,56 @@ const NotificationsView = () => {
                     rows="4" 
                     placeholder="Escribe el contenido del mensaje de difusión..."
                     className="input-base min-h-[120px] py-4"
+                    value={formData.message}
+                    onChange={(e) => setFormData({...formData, message: e.target.value})}
+                    required
                   ></textarea>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="label-base">Destinatarios</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button type="button" title="Global" className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:bg-primary/20 hover:text-primary hover:border-primary/40 transition-all flex justify-center">
-                      <Globe size={20} />
+                  <div className="flex justify-between items-center bg-slate-500/10 p-2 rounded-lg mb-2">
+                    <label className="label-base mb-0">Roles Destino</label>
+                    <button 
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev, 
+                        target_roles: prev.target_roles.length === roles.length ? [] : roles.map(r => r.id)
+                      }))}
+                      className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
+                    >
+                      {formData.target_roles.length === roles.length ? 'Desmarcar Todos' : 'Marcar Todos'}
                     </button>
-                    <button type="button" title="Equipo" className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:bg-primary/20 hover:text-primary hover:border-primary/40 transition-all flex justify-center">
-                      <Users size={20} />
-                    </button>
-                    <button type="button" title="Individual" className="p-3 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:bg-primary/20 hover:text-primary hover:border-primary/40 transition-all flex justify-center">
-                      <User size={20} />
-                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {roles.map(r => (
+                      <button
+                        key={r.id}
+                        type="button"
+                        onClick={() => handleRoleToggle(r.id)}
+                        className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                          formData.target_roles.includes(r.id)
+                            ? 'bg-primary/20 border-primary text-primary'
+                            : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <r.icon size={18} />
+                          <span className="text-xs font-bold uppercase tracking-wider">{r.label}</span>
+                        </div>
+                        {formData.target_roles.includes(r.id) && <CheckCircle2 size={16} />}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <Button variant="primary" className="w-full py-4 rounded-2xl" icon={CheckCircle2}>
-                  Lanzar Notificación
+                <Button 
+                  variant="primary" 
+                  className="w-full py-4 rounded-2xl" 
+                  icon={CheckCircle2}
+                  disabled={sending || !formData.title || !formData.message || formData.target_roles.length === 0}
+                  type="submit"
+                >
+                  {sending ? 'Lanzando...' : 'Lanzar Notificación'}
                 </Button>
               </form>
             </Card>
