@@ -7,20 +7,26 @@ exports.getTeams = async (req, res) => {
       FROM teams t
       LEFT JOIN users u ON t.coach_id = u.id
       LEFT JOIN profiles p ON u.id = p.user_id
+      WHERE 
+        ($1 IN ('admin', 'superadmin'))
+        OR (t.id = 1)
+        OR ($1 = 'coach' AND t.coach_id = $2)
+        OR ($1 = 'player' AND EXISTS (
+            SELECT 1 FROM team_players tp WHERE tp.team_id = t.id AND tp.player_id = $2
+        ))
+        OR ($1 = 'parent' AND EXISTS (
+            SELECT 1 FROM family_relations fr 
+            JOIN team_players tp ON fr.child_id = tp.player_id 
+            WHERE fr.parent_id = $2 AND tp.team_id = t.id
+        ))
+      ORDER BY t.name
     `;
-    const params = [];
-
-    if (req.user.role === 'coach') {
-      sql += ` WHERE t.coach_id = $1 `;
-      params.push(req.user.id);
-    }
-
-    sql += ` ORDER BY t.name `;
+    const params = [req.user.role, req.user.id];
 
     const result = await db.query(sql, params);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('Error fetching teams:', err);
     res.status(500).json({ message: 'Error fetching teams' });
   }
 };

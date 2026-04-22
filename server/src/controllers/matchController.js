@@ -6,24 +6,26 @@ exports.getMatches = async (req, res) => {
       SELECT m.*, t.name as team_name 
       FROM matches m 
       JOIN teams t ON m.team_id = t.id 
+      WHERE 
+        ($1 IN ('admin', 'superadmin'))
+        OR (m.team_id = 1 AND m.published = 1)
+        OR ($1 = 'coach' AND t.coach_id = $2)
+        OR ($1 = 'player' AND m.published = 1 AND EXISTS (
+            SELECT 1 FROM team_players tp WHERE tp.team_id = m.team_id AND tp.player_id = $2
+        ))
+        OR ($1 = 'parent' AND m.published = 1 AND EXISTS (
+            SELECT 1 FROM family_relations fr 
+            JOIN team_players tp ON fr.child_id = tp.player_id 
+            WHERE fr.parent_id = $2 AND tp.team_id = m.team_id
+        ))
+      ORDER BY m.match_date DESC, m.match_time DESC
     `;
-    const params = [];
-
-    // Filter by role
-    if (req.user.role === 'coach') {
-      // Coach only sees their assigned teams
-      query += ` WHERE t.coach_id = $1 `;
-      params.push(req.user.id);
-    } else if (!['admin', 'superadmin'].includes(req.user.role)) {
-      // Players/parents only see published matches
-      query += ` WHERE m.published = 1 `;
-    }
-
-    query += ` ORDER BY m.match_date DESC, m.match_time DESC `;
+    const params = [req.user.role, req.user.id];
 
     const result = await db.query(query, params);
     res.json(result.rows);
   } catch (err) {
+    console.error('Error fetching matches:', err);
     res.status(500).json({ message: 'Error fetching matches' });
   }
 };
