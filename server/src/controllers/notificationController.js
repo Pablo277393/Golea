@@ -5,11 +5,14 @@ exports.getNotifications = async (req, res) => {
     const result = await db.query(
       `SELECT * FROM notifications 
        WHERE recipient_id = $1 
-       OR team_id IN (SELECT team_id FROM team_players WHERE player_id = $1) 
+       OR team_id IN (
+         SELECT team_id FROM team_players WHERE player_id = $1
+         UNION
+         SELECT id FROM teams WHERE coach_id = $1
+       ) 
        OR scope = $2 
-       OR (target_roles IS NOT NULL AND target_roles LIKE $3)
        ORDER BY created_at DESC`,
-      [req.user.id, 'global', `%${req.user.role}%`]
+      [req.user.id, 'global']
     );
     res.json(result.rows);
   } catch (err) {
