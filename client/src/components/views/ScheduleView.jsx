@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   matchService, 
-  teamService 
+  teamService,
+  parentService
 } from '../../services/api';
 import { 
   Calendar, 
@@ -20,7 +21,10 @@ import {
   Trash2,
   AlertCircle,
   CheckCircle2,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  LayoutList
 } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -33,6 +37,8 @@ const ScheduleView = () => {
   const [selectedMatch, setSelectedMatch] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState('list');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   
   const [formData, setFormData] = useState({
     team_id: '',
@@ -48,8 +54,12 @@ const ScheduleView = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const fetchMatchesPromise = user?.role?.toLowerCase() === 'parent' 
+        ? parentService.getCalendarMatches() 
+        : matchService.getMatches();
+
       const [matchesRes, teamsRes] = await Promise.all([
-        matchService.getMatches(),
+        fetchMatchesPromise,
         teamService.getTeams()
       ]);
       setMatches(matchesRes.data);
@@ -116,6 +126,22 @@ const ScheduleView = () => {
   const getDay = (dateStr) => {
     if (!dateStr) return '??';
     return dateStr.split('-')[2];
+  };
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return { firstDay, daysInMonth };
+  };
+
+  const navigateMonth = (direction) => {
+    setCurrentMonth(prev => {
+      const next = new Date(prev);
+      next.setMonth(prev.getMonth() + direction);
+      return next;
+    });
   };
 
   const isStaff = ['coach', 'admin', 'superadmin'].includes(user?.role);
@@ -185,10 +211,17 @@ const ScheduleView = () => {
                <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
                   <Swords size={32} className="text-primary" />
                </div>
-               <div>
+                <div>
                   <h3 className="text-3xl font-bold">vs {selectedMatch.opponent}</h3>
-                  <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-widest mt-2">{selectedMatch.team_id === 1 ? 'Primer Equipo - Élite' : 'Competición Oficial'}</span>
-               </div>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-widest">{selectedMatch.team_id === 1 ? 'Primer Equipo - Élite' : 'Competición Oficial'}</span>
+                    {selectedMatch.player_username && (
+                      <span className="px-3 py-1 bg-white/5 text-slate-400 border border-white/5 rounded-full text-[10px] font-black uppercase tracking-[0.15em]">
+                        Jugador: {selectedMatch.player_first_name || selectedMatch.player_username}
+                      </span>
+                    )}
+                  </div>
+                </div>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 p-6 bg-white/5 rounded-2xl border border-white/5">
@@ -258,16 +291,34 @@ const ScheduleView = () => {
           <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Calendario de Partidos</h2>
           <p className="text-slate-400 font-medium">Gestión de encuentros y comunicación oficial.</p>
         </div>
-        {isStaff && (
-          <Button 
-            variant={showForm ? 'secondary' : 'primary'} 
-            onClick={() => setShowForm(!showForm)} 
-            icon={showForm ? X : Plus}
-            className="w-full sm:w-auto"
-          >
-            {showForm ? 'Cancelar' : 'Nuevo Partido'}
-          </Button>
-        )}
+        
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-2 px-4 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-primary text-dark shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
+            >
+              <LayoutList size={16} /> Lista
+            </button>
+            <button 
+              onClick={() => setViewMode('calendar')}
+              className={`p-2 px-4 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'calendar' ? 'bg-primary text-dark shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Calendar size={16} /> Grid
+            </button>
+          </div>
+
+          {isStaff && (
+            <Button 
+              variant={showForm ? 'secondary' : 'primary'} 
+              onClick={() => setShowForm(!showForm)} 
+              icon={showForm ? X : Plus}
+              className="flex-1 sm:flex-none"
+            >
+              {showForm ? 'Cancelar' : 'Nuevo'}
+            </Button>
+          )}
+        </div>
       </header>
 
       {showForm && (
@@ -360,83 +411,140 @@ const ScheduleView = () => {
         </Card>
       )}
 
-      <div className="space-y-4">
-        {matches.length > 0 ? matches.map(match => (
-          <Card 
-            key={match.id} 
-            className={`p-1 px-8 lg:px-10 transition-all duration-300 ${match.published ? 'hover:border-primary/40' : 'border-yellow-500/10 bg-yellow-500/[0.01]'}`}
-            hover={match.published}
-          >
-            <div className="flex flex-col lg:flex-row items-center justify-between gap-8 py-6">
-              <div className="flex flex-col lg:flex-row items-center gap-8 w-full">
-                {/* Date Plate */}
-                <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-2xl border shadow-glass shrink-0 transition-colors ${
-                  match.published ? 'bg-white/5 border-white/10 text-white' : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-500/70'
-                }`}>
-                  <span className="text-3xl font-bold leading-none">{getDay(match.match_date)}</span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-widest mt-1 opacity-60">2026</span>
-                </div>
+      {viewMode === 'list' ? (
+        <div className="space-y-4">
+          {matches.length > 0 ? matches.map(match => (
+            <Card 
+              key={match.id} 
+              className={`p-1 px-8 lg:px-10 transition-all duration-300 ${match.published ? 'hover:border-primary/40' : 'border-yellow-500/10 bg-yellow-500/[0.01]'}`}
+              hover={match.published}
+            >
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-8 py-6">
+                <div className="flex flex-col lg:flex-row items-center gap-8 w-full">
+                  {/* Date Plate */}
+                  <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-2xl border shadow-glass shrink-0 transition-colors ${
+                    match.published ? 'bg-white/5 border-white/10 text-white' : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-500/70'
+                  }`}>
+                    <span className="text-3xl font-bold leading-none">{getDay(match.match_date)}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-widest mt-1 opacity-60">2026</span>
+                  </div>
 
-                <div className="flex-1 text-center lg:text-left space-y-2">
-                  <div className="flex flex-wrap justify-center lg:justify-start items-center gap-3">
-                    {match.team_id === 1 && (
-                      <span className="px-2 py-0.5 bg-gold-gradient text-dark rounded-md text-[8px] font-black uppercase tracking-tighter">Primer Equipo</span>
-                    )}
-                    <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] border ${
-                      match.published 
-                      ? 'bg-primary/10 text-primary border-primary/20' 
-                      : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                    }`}>
-                      {match.published ? 'Publicado' : 'Borrador'}
-                    </span>
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                      <div className="w-1 h-1 rounded-full bg-slate-600"></div> {match.team_name}
-                    </span>
-                  </div>
-                  <h4 className="text-2xl font-bold group-hover:text-primary transition-colors">vs {match.opponent}</h4>
-                  
-                  <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 text-sm text-slate-500 font-medium">
-                    <span className="flex items-center gap-2">
-                      <Clock size={16} className="text-primary/70" /> {match.match_time.substring(0, 5)}
-                    </span>
-                    {match.location && (
-                      <span className="flex items-center gap-2">
-                        <MapPin size={16} className="text-primary/70" /> {match.location}
+                  <div className="flex-1 text-center lg:text-left space-y-2">
+                    <div className="flex flex-wrap justify-center lg:justify-start items-center gap-3">
+                      {match.team_id === 1 && (
+                        <span className="px-2 py-0.5 bg-gold-gradient text-dark rounded-md text-[8px] font-black uppercase tracking-tighter">Primer Equipo</span>
+                      )}
+                      {match.player_username && (
+                        <span className="px-2 py-0.5 bg-white/10 text-slate-300 rounded-md text-[8px] font-black uppercase tracking-widest border border-white/10">
+                          {match.player_first_name || match.player_username}
+                        </span>
+                      )}
+                      <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] border ${
+                        match.published 
+                        ? 'bg-primary/10 text-primary border-primary/20' 
+                        : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                      }`}>
+                        {match.published ? 'Publicado' : 'Borrador'}
                       </span>
-                    )}
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-slate-600"></div> {match.team_name}
+                      </span>
+                    </div>
+                    <h4 className="text-2xl font-bold group-hover:text-primary transition-colors">vs {match.opponent}</h4>
+                    
+                    <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 text-sm text-slate-500 font-medium">
+                      <span className="flex items-center gap-2">
+                        <Clock size={16} className="text-primary/70" /> {match.match_time.substring(0, 5)}
+                      </span>
+                      {match.location && (
+                        <span className="flex items-center gap-2">
+                          <MapPin size={16} className="text-primary/70" /> {match.location}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                
+                <div className="shrink-0 w-full lg:w-auto flex flex-col sm:flex-row gap-3">
+                   {!match.published && isStaff && (
+                      <Button 
+                        variant="primary" 
+                        onClick={() => handlePublish(match.id)}
+                        icon={Send}
+                        className="w-full sm:w-auto px-6"
+                      >
+                        Publicar
+                      </Button>
+                   )}
+                   <Button 
+                    variant="secondary"
+                    onClick={() => setSelectedMatch(match)}
+                    icon={ArrowRight}
+                    className="w-full sm:w-auto px-8 py-3 rounded-xl border-white/5"
+                  >
+                    Ver Detalles
+                  </Button>
+                </div>
               </div>
-              
-              <div className="shrink-0 w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-                 {!match.published && isStaff && (
-                    <Button 
-                      variant="primary" 
-                      onClick={() => handlePublish(match.id)}
-                      icon={Send}
-                      className="w-full sm:w-auto px-6"
-                    >
-                      Publicar
-                    </Button>
-                 )}
-                 <Button 
-                  variant="secondary"
-                  onClick={() => setSelectedMatch(match)}
-                  icon={ArrowRight}
-                  className="w-full sm:w-auto px-8 py-3 rounded-xl border-white/5"
-                >
-                  Ver Detalles
-                </Button>
-              </div>
+            </Card>
+          )) : (
+            <div className="text-center py-20 bg-white/[0.02] rounded-3xl border border-white/5 border-dashed">
+              <Calendar size={48} className="mx-auto mb-4 text-slate-700" />
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">No hay eventos programados en este momento</p>
             </div>
-          </Card>
-        )) : (
-          <div className="text-center py-20 bg-white/[0.02] rounded-3xl border border-white/5 border-dashed">
-            <Calendar size={48} className="mx-auto mb-4 text-slate-700" />
-            <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">No hay eventos programados en este momento</p>
+          )}
+        </div>
+      ) : (
+        <Card className="p-8 border-white/5" hover={false}>
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-2xl font-bold uppercase tracking-tight">
+              {currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}
+            </h3>
+            <div className="flex gap-2">
+              <Button variant="secondary" className="p-2" icon={ChevronLeft} onClick={() => navigateMonth(-1)} />
+              <Button variant="secondary" className="p-2" icon={ChevronRight} onClick={() => navigateMonth(1)} />
+            </div>
           </div>
-        )}
-      </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(d => (
+              <div key={d} className="text-center py-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
+                {d}
+              </div>
+            ))}
+            
+            {Array.from({ length: (getDaysInMonth(currentMonth).firstDay + 6) % 7 }).map((_, i) => (
+              <div key={`empty-${i}`} className="h-32 bg-white/[0.02] rounded-2xl border border-white/5 opacity-20" />
+            ))}
+
+            {Array.from({ length: getDaysInMonth(currentMonth).daysInMonth }).map((_, i) => {
+              const day = i + 1;
+              const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const dayMatches = matches.filter(m => m.match_date === dateStr);
+              
+              return (
+                <div key={day} className={`h-32 p-3 rounded-2xl border transition-all ${dayMatches.length > 0 ? 'bg-primary/5 border-primary/20' : 'bg-white/5 border-white/5'}`}>
+                  <span className={`text-sm font-bold ${dayMatches.length > 0 ? 'text-primary' : 'text-slate-500'}`}>{day}</span>
+                  <div className="mt-2 space-y-1">
+                    {dayMatches.map(m => (
+                      <button 
+                        key={m.id}
+                        onClick={() => setSelectedMatch(m)}
+                        className="w-full text-left p-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all overflow-hidden"
+                      >
+                        <p className="text-[8px] font-black text-primary uppercase truncate">vs {m.opponent}</p>
+                        {m.player_username && (
+                          <p className="text-[6px] font-bold text-slate-400 uppercase truncate mt-0.5">{m.player_first_name || m.player_username}</p>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
     </div>
   );
 };

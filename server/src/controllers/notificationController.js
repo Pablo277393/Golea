@@ -18,23 +18,53 @@ exports.getNotifications = async (req, res) => {
 };
 
 exports.sendNotification = async (req, res) => {
-  const { recipient_id, team_id, scope, type, title, message, target_roles } = req.body;
+  const { recipient_id, team_id, team_ids, scope, type, title, message, target_roles } = req.body;
+  const userRole = req.user.role.toLowerCase();
+
   try {
-    // Security check for coaches
-    if (req.user.role === 'coach' && team_id) {
-       const teamCheck = await db.query('SELECT * FROM teams WHERE id = $1 AND coach_id = $2', [team_id, req.user.id]);
-       if (teamCheck.rows.length === 0) {
-         return res.status(403).json({ message: 'No tiene permisos para enviar notificaciones a este equipo' });
-       }
+    // 1. Enforce Scope permissions
+    if (scope === 'global' && !['admin', 'superadmin'].includes(userRole)) {
+      return res.status(403).json({ message: 'No tienes permisos para enviar notificaciones globales' });
     }
 
-    await db.query(
-      `INSERT INTO notifications (sender_id, recipient_id, team_id, scope, type, title, message, target_roles) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [req.user.id, recipient_id || null, team_id || null, scope, type, title, message, target_roles]
-    );
+    const targetTeams = team_ids || (team_id ? [team_id] : []);
+
+    if (scope === 'team') {
+      if (targetTeams.length === 0) {
+        return res.status(400).json({ message: 'Debe seleccionar al menos un equipo para notificaciones de equipo' });
+      }
+      
+      // If coach, verify they manage ALL selected teams
+      if (userRole === 'coach') {
+        for (const tid of targetTeams) {
+          const teamCheck = await db.query('SELECT id FROM teams WHERE id = $1 AND coach_id = $2', [tid, req.user.id]);
+          if (teamCheck.rows.length === 0) {
+            return res.status(403).json({ message: `No tienes permisos para enviar notificaciones al equipo con ID ${tid}` });
+          }
+        }
+      }
+    }
+
+    // 2. Insert notifications
+    if (scope === 'team' && targetTeams.length > 0) {
+      for (const tid of targetTeams) {
+        await db.query(
+          `INSERT INTO notifications (sender_id, team_id, scope, type, title, message, target_roles) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [req.user.id, tid, 'team', type || 'informative', title, message, target_roles]
+        );
+      }
+    } else {
+      await db.query(
+        `INSERT INTO notifications (sender_id, recipient_id, team_id, scope, type, title, message, target_roles) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [req.user.id, recipient_id || null, team_id || null, scope, type || 'informative', title, message, target_roles]
+      );
+    }
+    
     res.status(201).json({ message: 'Notification sent successfully' });
   } catch (err) {
+    console.error('Error sending notification:', err);
     res.status(500).json({ message: 'Error sending notification' });
   }
 };

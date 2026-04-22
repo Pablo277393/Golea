@@ -1,22 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Calendar, Bell, ArrowRight, Info } from 'lucide-react';
+import { Calendar, Bell, ArrowRight, Info, MoreVertical, QrCode, Copy, Check } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
-import { notificationService, matchService } from '../../services/api';
+import Modal from '../ui/Modal';
+import { notificationService, matchService, playerService, parentService } from '../../services/api';
 
 const Overview = ({ onViewChange }) => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [matches, setMatches] = useState([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [linkingCode, setLinkingCode] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [notifRes, matchRes] = await Promise.all([
-          notificationService.getNotifications(),
-          matchService.getMatches()
-        ]);
+        let notifRes, matchRes;
+        
+        if (user?.role?.toLowerCase() === 'parent') {
+          [notifRes, matchRes] = await Promise.all([
+            parentService.getNotifications(),
+            parentService.getUpcomingMatches()
+          ]);
+        } else {
+          [notifRes, matchRes] = await Promise.all([
+            notificationService.getNotifications(),
+            matchService.getMatches()
+          ]);
+        }
+
         setNotifications(notifRes.data.slice(0, 3));
         
         // Find next match (closest to today)
@@ -32,7 +48,27 @@ const Overview = ({ onViewChange }) => {
     };
 
     fetchData();
-  }, []);
+  }, [user]);
+
+  const handleGenerateCode = async () => {
+    setIsGenerating(true);
+    setIsMenuOpen(false);
+    try {
+      const res = await playerService.generateLinkingCode();
+      setLinkingCode(res.data.linkingCode);
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error('Error generating linking code:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(linkingCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const nextMatch = matches[0];
 
@@ -47,12 +83,70 @@ const Overview = ({ onViewChange }) => {
             Esto es lo que está pasando en el club hoy.
           </p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 relative">
           <Button variant="secondary" className="px-5 py-2 text-sm" icon={Bell} onClick={() => onViewChange?.('Notificaciones')}>
             Notificaciones
           </Button>
+          
+          {user?.role?.toLowerCase() === 'player' && (
+            <div className="relative">
+              <Button 
+                variant="outline" 
+                className="p-3 border-white/10" 
+                icon={MoreVertical} 
+                onClick={() => setIsMenuOpen(!isMenuOpen)} 
+              />
+              
+              {isMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 bg-surface/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-glass z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                  <button 
+                    onClick={handleGenerateCode}
+                    disabled={isGenerating}
+                    className="w-full text-left px-6 py-4 text-xs font-bold uppercase tracking-widest text-slate-300 hover:text-primary hover:bg-white/5 transition-all flex items-center gap-3"
+                  >
+                    <QrCode size={16} />
+                    {isGenerating ? 'Generando...' : 'Código Vinculación'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
+
+      {/* Linking Code Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        title="Código de Vinculación"
+      >
+        <div className="text-center space-y-6">
+          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto border border-primary/20 text-primary">
+            <QrCode size={40} />
+          </div>
+          
+          <div>
+            <p className="text-slate-400 text-sm font-medium mb-2 uppercase tracking-widest">Tu código único es:</p>
+            <div className="bg-dark/50 border border-white/10 rounded-2xl p-6 font-mono text-3xl font-black text-primary tracking-tighter shadow-inner relative group">
+              {linkingCode}
+              <button 
+                onClick={copyToClipboard}
+                className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-primary/10 rounded-xl text-primary opacity-0 group-hover:opacity-100 transition-all hover:bg-primary hover:text-dark"
+              >
+                {copied ? <Check size={18} /> : <Copy size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-slate-500 uppercase tracking-tight leading-relaxed">
+            Comparte este código con tu padre o madre para que puedan vincular tu perfil a su cuenta.
+          </p>
+
+          <Button className="w-full justify-center py-4 rounded-2xl" onClick={() => setIsModalOpen(false)}>
+            Entendido
+          </Button>
+        </div>
+      </Modal>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {/* Next Matches Card */}
@@ -82,6 +176,11 @@ const Overview = ({ onViewChange }) => {
                     </p>
                     <h4 className="text-lg font-bold">
                       {match.is_home ? `vs ${match.opponent}` : `@ ${match.opponent}`}
+                      {match.player_username && (
+                        <span className="ml-2 text-[7px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-1.5 py-0.5 rounded align-middle">
+                          {match.player_first_name || match.player_username}
+                        </span>
+                      )}
                     </h4>
                   </div>
                   <div className="mt-3 flex items-center gap-2">
@@ -129,7 +228,14 @@ const Overview = ({ onViewChange }) => {
                   <Info size={16} className="text-slate-400 group-hover:text-primary transition-colors" />
                 </div>
                 <div>
-                  <p className="font-bold text-white mb-1 group-hover:text-primary transition-colors">{n.title}</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-bold text-white group-hover:text-primary transition-colors">{n.title}</p>
+                    {n.player_username && (
+                      <span className="text-[7px] font-black uppercase tracking-[0.2em] text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                        {n.player_first_name || n.player_username}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-slate-400 leading-relaxed">{n.message}</p>
                 </div>
               </div>

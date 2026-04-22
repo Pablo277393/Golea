@@ -8,6 +8,7 @@ CREATE TABLE users (
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL CHECK(role IN ('coach','player','parent','admin','superadmin')),
+    linking_code TEXT UNIQUE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -31,6 +32,17 @@ CREATE TABLE family_relations (
     UNIQUE(parent_id, child_id),
     FOREIGN KEY(parent_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(child_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Parent player relations (Alias for family_relations as per spec)
+CREATE TABLE parent_player (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    parent_id INTEGER,
+    player_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(parent_id, player_id),
+    FOREIGN KEY(parent_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(player_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Teams table

@@ -12,6 +12,8 @@ const trainingRoutes = require('./routes/trainings');
 const notificationRoutes = require('./routes/notifications');
 const gamificationRoutes = require('./routes/gamification');
 const familyRoutes = require('./routes/family');
+const parentRoutes = require('./routes/parent');
+const playerRoutes = require('./routes/player');
 const adRoutes = require('./routes/ads');
 const path = require('path');
 
@@ -33,6 +35,8 @@ app.use('/api/trainings', trainingRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/gamification', gamificationRoutes);
 app.use('/api/family', familyRoutes);
+app.use('/api/parent', parentRoutes);
+app.use('/api/player', playerRoutes);
 app.use('/api/ads', adRoutes);
 
 // Health check

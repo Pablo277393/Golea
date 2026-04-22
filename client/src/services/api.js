@@ -80,9 +80,17 @@ export const adService = {
   deleteAd: (id) => api.delete(`/ads/${id}`),
 };
 
-export const familyService = {
-  getChildren: () => api.get('/family/children'),
-  addChild: (data) => api.post('/family/add-child', data),
+export const playerService = {
+  generateLinkingCode: () => api.post('/player/generate-linking-code'),
+};
+
+export const parentService = {
+  getPlayers: () => api.get('/parent/players'),
+  linkPlayer: (linkingCode) => api.post('/parent/link-player', { linkingCode }),
+  getNotifications: () => api.get('/parent/notifications'),
+  getMatches: () => api.get('/parent/matches'),
+  getCalendarMatches: () => api.get('/parent/calendar/matches'),
+  getUpcomingMatches: () => api.get('/parent/upcoming-matches'),
 };
 
 export default api;

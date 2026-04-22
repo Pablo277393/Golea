@@ -17,8 +17,12 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      await login({ email, password });
-      navigate('/dashboard');
+      const user = await login({ email, password });
+      if (user.role?.toLowerCase() === 'parent') {
+        navigate('/mis-jugadores');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       setError('Credenciales incorrectas. Verifique sus datos.');
     } finally {

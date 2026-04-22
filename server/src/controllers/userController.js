@@ -1,5 +1,6 @@
 const db = require('../config/db');
 const bcrypt = require('bcrypt');
+const { generateLinkingCode } = require('../utils/codeGenerator');
 
 /**
  * Get users filtered by role
@@ -45,9 +46,11 @@ exports.createUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(passwordToHash, salt);
 
+    const linkingCode = role === 'player' ? generateLinkingCode() : null;
+
     const result = await db.query(
-      'INSERT INTO users (username, email, password_hash, role) VALUES ($1, $2, $3, $4)',
-      [username, email, passwordHash, role || 'player']
+      'INSERT INTO users (username, email, password_hash, role, linking_code) VALUES ($1, $2, $3, $4, $5)',
+      [username, email, passwordHash, role || 'player', linkingCode]
     );
 
     const userId = result.lastID || (result.rows && result.rows[0]?.id);

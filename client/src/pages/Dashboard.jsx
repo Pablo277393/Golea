@@ -11,7 +11,8 @@ import {
   Target,
   Menu,
   X,
-  Megaphone
+  Megaphone,
+  Shield
 } from 'lucide-react';
 import Overview from '../components/views/Overview';
 import TeamsView from '../components/views/TeamsView';
@@ -21,18 +22,21 @@ import CallupsView from '../components/views/CallupsView';
 import PredictionsView from '../components/views/PredictionsView';
 import MVPView from '../components/views/MVPView';
 import AdsAdminView from '../components/views/AdsAdminView';
+import UsersManagementView from '../components/views/UsersManagementView';
 import AdBanner from '../components/ads/AdBanner';
+import MyPlayersView from '../components/views/MyPlayersView';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Container from '../components/ui/Container';
 
-const Dashboard = () => {
+const Dashboard = ({ defaultView }) => {
   const { user, logout } = useAuth();
-  const [activeView, setActiveView] = useState('Resumen');
+  const [activeView, setActiveView] = useState(defaultView || (user?.role?.toLowerCase() === 'parent' ? 'Mis jugadores' : 'Resumen'));
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const menuItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Resumen', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
+    { icon: <Users size={30} />, label: 'Mis jugadores', roles: ['parent'] },
     { icon: <Users size={20} />, label: 'Equipos', roles: ['coach', 'admin', 'superadmin'] },
     { icon: <Calendar size={20} />, label: 'Calendario', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
     { icon: <ClipboardList size={20} />, label: 'Convocatorias', roles: ['coach', 'superadmin'] },
@@ -40,6 +44,7 @@ const Dashboard = () => {
     { icon: <Bell size={20} />, label: 'Notificaciones', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
     { icon: <Trophy size={20} />, label: 'MVP Semanal', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
     { icon: <Megaphone size={20} />, label: 'Gestión Publicidad', roles: ['superadmin'] },
+    { icon: <Shield size={20} />, label: 'Gestión Usuarios', roles: ['superadmin'] },
   ];
 
   const filteredMenu = menuItems.filter(item => {
@@ -61,7 +66,9 @@ const Dashboard = () => {
       'Convocatorias': <CallupsView />,
       'Quiniela': <PredictionsView />,
       'MVP Semanal': <MVPView />,
-      'Gestión Publicidad': <AdsAdminView />
+      'Mis jugadores': <MyPlayersView />,
+      'Gestión Publicidad': <AdsAdminView />,
+      'Gestión Usuarios': <UsersManagementView />
     };
     
     return viewMap[activeView] || <Overview />;

@@ -4,32 +4,45 @@ import { Bell, Send, User, Users, Globe, Info, Clock, CheckCircle2 } from 'lucid
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
-import { notificationService } from '../../services/api';
+import { notificationService, parentService, teamService } from '../../services/api';
 
 const NotificationsView = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+   const [sending, setSending] = useState(false);
+  const [teams, setTeams] = useState([]);
+  
+  const isStaff = user?.role === 'coach' || user?.role === 'admin' || user?.role === 'superadmin';
   
   // Form state
   const [formData, setFormData] = useState({
-    title: '',
+     title: '',
     message: '',
-    scope: 'global',
+    scope: user?.role === 'coach' ? 'team' : 'global',
+    team_ids: [],
     target_roles: []
   });
 
-  const roles = [
+   const allRoles = [
     { id: 'coach', label: 'Cuerpo Técnico', icon: User },
     { id: 'player', label: 'Jugadores', icon: Users },
     { id: 'parent', label: 'Padres/Tutores', icon: Globe },
     { id: 'admin', label: 'Administradores', icon: CheckCircle2 }
   ];
 
+  const allowedRoles = user?.role === 'coach' 
+    ? allRoles.filter(r => ['coach', 'player', 'parent'].includes(r.id))
+    : allRoles;
+
   const fetchNotifications = async () => {
     try {
-      const res = await notificationService.getNotifications();
+      let res;
+      if (user?.role?.toLowerCase() === 'parent') {
+        res = await parentService.getNotifications();
+      } else {
+        res = await notificationService.getNotifications();
+      }
       setNotifications(res.data);
     } catch (err) {
       console.error('Error fetching notifications:', err);
@@ -40,6 +53,14 @@ const NotificationsView = () => {
 
   useEffect(() => {
     fetchNotifications();
+    if (isStaff) {
+      teamService.getTeams().then(res => {
+        setTeams(res.data);
+        if (res.data.length > 0 && user?.role === 'coach') {
+          setFormData(prev => ({ ...prev, team_ids: [res.data[0].id] }));
+        }
+      });
+    }
   }, []);
 
   const handleRoleToggle = (roleId) => {
@@ -59,12 +80,18 @@ const NotificationsView = () => {
     
     setSending(true);
     try {
-      await notificationService.sendNotification({
+       await notificationService.sendNotification({
         ...formData,
         target_roles: formData.target_roles.join(','),
         type: 'informative'
       });
-      setFormData({ title: '', message: '', scope: 'global', target_roles: [] });
+      setFormData({ 
+        title: '', 
+        message: '', 
+        scope: user?.role === 'coach' ? 'team' : 'global', 
+        team_ids: teams.length > 0 && user?.role === 'coach' ? [teams[0].id] : [],
+        target_roles: [] 
+      });
       alert('¡Notificación enviada con éxito!');
       fetchNotifications();
     } catch (err) {
@@ -119,7 +146,14 @@ const NotificationsView = () => {
                       <div className={`p-2 rounded-lg ${n.type === 'training' ? 'bg-primary/10 text-primary' : 'bg-slate-500/10 text-slate-400'}`}>
                         {n.type === 'training' ? <Users size={18} /> : <Info size={18} />}
                       </div>
-                      <h4 className="text-xl font-bold text-white">{n.title}</h4>
+                      <div className="flex flex-col">
+                        <h4 className="text-xl font-bold text-white">{n.title}</h4>
+                        {n.player_username && (
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mt-1">
+                            Para: {n.player_first_name || n.player_username}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
                       <Clock size={14} /> {new Date(n.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
@@ -182,24 +216,91 @@ const NotificationsView = () => {
                     onChange={(e) => setFormData({...formData, message: e.target.value})}
                     required
                   ></textarea>
+                <div className="grid grid-cols-1 gap-6">
+                  {user?.role !== 'coach' && (
+                    <div className="space-y-2">
+                      <label className="label-base">Alcance (Scope)</label>
+                      <select 
+                        value={formData.scope}
+                        onChange={(e) => setFormData({...formData, scope: e.target.value})}
+                        className="input-base cursor-pointer"
+                      >
+                        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                          <option value="global">Global (Todo el Club)</option>
+                        )}
+                        <option value="team">Equipo Específico</option>
+                      </select>
+                    </div>
+                  )}
+
+                  {(formData.scope === 'team' || user?.role === 'coach') && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="space-y-3 p-4 border border-primary/10 rounded-xl bg-primary/[0.03]">
+                        <div className="flex justify-between items-center bg-slate-500/10 p-2 rounded-lg mb-2">
+                          <label className="label-base mb-0">Seleccionar Equipos</label>
+                          {user?.role === 'coach' && teams.length > 1 && (
+                            <button 
+                              type="button"
+                              onClick={() => setFormData(prev => ({
+                                ...prev, 
+                                team_ids: prev.team_ids.length === teams.length ? [] : teams.map(t => t.id)
+                              }))}
+                              className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
+                            >
+                              {formData.team_ids.length === teams.length ? 'Desmarcar Equipos' : 'Marcar Equipos Asignados'}
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {teams.map(t => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => {
+                                const isSelected = formData.team_ids.includes(t.id);
+                                setFormData(prev => ({
+                                  ...prev,
+                                  team_ids: isSelected 
+                                    ? prev.team_ids.filter(id => id !== t.id)
+                                    : [...prev.team_ids, t.id]
+                                }));
+                              }}
+                              className={`flex items-center gap-3 p-4 rounded-xl border transition-all text-left ${
+                                formData.team_ids.includes(t.id)
+                                  ? 'bg-primary/20 border-primary text-primary shadow-gold-glow'
+                                  : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="flex-1">
+                                <p className="text-xs font-bold uppercase tracking-wider truncate">{t.name}</p>
+                                <p className="text-[8px] text-slate-500 font-medium">Categoría: {t.category || 'N/A'}</p>
+                              </div>
+                              {formData.team_ids.includes(t.id) && <CheckCircle2 size={16} />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              </div>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center bg-slate-500/10 p-2 rounded-lg mb-2">
                     <label className="label-base mb-0">Roles Destino</label>
                     <button 
                       type="button"
-                      onClick={() => setFormData(prev => ({
+                       onClick={() => setFormData(prev => ({
                         ...prev, 
-                        target_roles: prev.target_roles.length === roles.length ? [] : roles.map(r => r.id)
+                        target_roles: prev.target_roles.length === allowedRoles.length ? [] : allowedRoles.map(r => r.id)
                       }))}
                       className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
                     >
-                      {formData.target_roles.length === roles.length ? 'Desmarcar Todos' : 'Marcar Todos'}
+                      {formData.target_roles.length === allowedRoles.length ? 'Limpiar Selección' : 'Seleccionar Todo'}
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 gap-2">
-                    {roles.map(r => (
+                   <div className="grid grid-cols-1 gap-2">
+                    {allowedRoles.map(r => (
                       <button
                         key={r.id}
                         type="button"
@@ -232,12 +333,14 @@ const NotificationsView = () => {
               </form>
             </Card>
             
-            <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl">
-               <p className="text-[10px] text-primary/70 font-bold uppercase tracking-[0.2em] mb-2 leading-tight">Elite Concierge Tip</p>
-               <p className="text-xs text-slate-500 leading-relaxed italic">
-                 "Los mensajes con segmentación global son visibles para todos los socios y staff del club."
-               </p>
-            </div>
+             {user?.role !== 'coach' && (
+              <div className="p-6 bg-primary/5 border border-primary/10 rounded-2xl">
+                 <p className="text-[10px] text-primary/70 font-bold uppercase tracking-[0.2em] mb-2 leading-tight">Elite Concierge Tip</p>
+                 <p className="text-xs text-slate-500 leading-relaxed italic">
+                   "Los mensajes con segmentación global son visibles para todos los socios y staff del club."
+                 </p>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -39,6 +39,11 @@ const AppRoutes = () => {
             <Dashboard />
           </PrivateRoute>
         } />
+        <Route path="/mis-jugadores" element={
+          <PrivateRoute>
+            <Dashboard defaultView="Mis jugadores" />
+          </PrivateRoute>
+        } />
         <Route path="/" element={<LandingPage />} />
         {/* Add more routes like Register, Teams, etc. here */}
       </Routes>
