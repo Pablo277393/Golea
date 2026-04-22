@@ -1,27 +1,43 @@
 const db = require('../config/db');
 
 exports.getTeams = async (req, res) => {
+  const managedOnly = req.query.managedOnly === 'true';
   try {
-    let sql = `
-      SELECT t.*, p.first_name || ' ' || p.last_name as coach_name 
-      FROM teams t
-      LEFT JOIN users u ON t.coach_id = u.id
-      LEFT JOIN profiles p ON u.id = p.user_id
-      WHERE 
-        ($1 IN ('admin', 'superadmin'))
-        OR (t.id = 1)
-        OR ($1 = 'coach' AND t.coach_id = $2)
-        OR ($1 = 'player' AND EXISTS (
-            SELECT 1 FROM team_players tp WHERE tp.team_id = t.id AND tp.player_id = $2
-        ))
-        OR ($1 = 'parent' AND EXISTS (
-            SELECT 1 FROM family_relations fr 
-            JOIN team_players tp ON fr.child_id = tp.player_id 
-            WHERE fr.parent_id = $2 AND tp.team_id = t.id
-        ))
-      ORDER BY t.name
-    `;
-    const params = [req.user.role, req.user.id];
+    let sql;
+    let params;
+    
+    if (managedOnly && req.user.role === 'coach') {
+      sql = `
+        SELECT t.*, p.first_name || ' ' || p.last_name as coach_name 
+        FROM teams t
+        LEFT JOIN users u ON t.coach_id = u.id
+        LEFT JOIN profiles p ON u.id = p.user_id
+        WHERE t.coach_id = $1
+        ORDER BY t.name
+      `;
+      params = [req.user.id];
+    } else {
+      sql = `
+        SELECT t.*, p.first_name || ' ' || p.last_name as coach_name 
+        FROM teams t
+        LEFT JOIN users u ON t.coach_id = u.id
+        LEFT JOIN profiles p ON u.id = p.user_id
+        WHERE 
+          ($1 IN ('admin', 'superadmin'))
+          OR (t.id = 1)
+          OR ($1 = 'coach' AND t.coach_id = $2)
+          OR ($1 = 'player' AND EXISTS (
+              SELECT 1 FROM team_players tp WHERE tp.team_id = t.id AND tp.player_id = $2
+          ))
+          OR ($1 = 'parent' AND EXISTS (
+              SELECT 1 FROM family_relations fr 
+              JOIN team_players tp ON fr.child_id = tp.player_id 
+              WHERE fr.parent_id = $2 AND tp.team_id = t.id
+          ))
+        ORDER BY t.name
+      `;
+      params = [req.user.role, req.user.id];
+    }
 
     const result = await db.query(sql, params);
     res.json(result.rows);

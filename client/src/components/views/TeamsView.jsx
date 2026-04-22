@@ -67,7 +67,7 @@ const TeamsView = () => {
     setLoading(true);
     try {
       if (activeTab === 'teams') {
-        const res = await teamService.getTeams();
+        const res = await teamService.getTeams({ managedOnly: user?.role === 'coach' });
         setTeams(res.data);
         const coaches = await authService.getUsersByRole('coach');
         setAvailableCoaches(coaches.data);
@@ -190,6 +190,7 @@ const TeamsView = () => {
   // Roster Actions
   const openAddRoster = async () => {
     setShowAddPlayerToRoster(true);
+    setAddRosterMode('existing');
     const res = await authService.getUsersByRole('player');
     setAvailablePlayers(res.data);
   };
@@ -251,7 +252,7 @@ const TeamsView = () => {
               <span className="flex items-center gap-1.5"><Users size={14} className="text-primary" /> {teamPlayers.length} Jugadores</span>
             </div>
           </div>
-          {(user?.role === 'superadmin' || user?.role === 'admin') && (
+          {(user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'coach') && (
             <Button variant="primary" icon={Plus} onClick={openAddRoster}>
               Gestionar Plantilla
             </Button>
@@ -291,15 +292,21 @@ const TeamsView = () => {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => openUserModal('edit', 'player', p)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
-                          <Edit2 size={16} />
-                        </button>
-                        <button onClick={() => handleRemoveFromRoster(p.id)} className="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors" title="Quitar de equipo">
-                          <MinusCircle size={16} />
-                        </button>
-                        <button onClick={() => handleDeleteUser(p.id)} className="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-red-500/50 hover:text-red-500 transition-colors" title="Eliminar del sistema">
-                          <Trash2 size={16} />
-                        </button>
+                        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                          <button onClick={() => openUserModal('edit', 'player', p)} className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors">
+                            <Edit2 size={16} />
+                          </button>
+                        )}
+                        {(user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'coach') && (
+                          <button onClick={() => handleRemoveFromRoster(p.id)} className="p-2 rounded-lg bg-white/5 hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors" title="Quitar de equipo">
+                            <MinusCircle size={16} />
+                          </button>
+                        )}
+                        {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                          <button onClick={() => handleDeleteUser(p.id)} className="p-2 rounded-lg bg-white/5 hover:bg-red-500/20 text-red-500/50 hover:text-red-500 transition-colors" title="Eliminar del sistema">
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -319,20 +326,22 @@ const TeamsView = () => {
                 <button onClick={() => setShowAddPlayerToRoster(false)} className="text-slate-400 hover:text-white"><X size={24} /></button>
               </div>
 
-              <div className="flex gap-4 mb-8">
-                <button 
-                  className={`flex-1 py-3 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${addRosterMode === 'existing' ? 'bg-primary text-black border-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
-                  onClick={() => setAddRosterMode('existing')}
-                >
-                  Existente
-                </button>
-                <button 
-                  className={`flex-1 py-3 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${addRosterMode === 'new' ? 'bg-primary text-black border-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
-                  onClick={() => setAddRosterMode('new')}
-                >
-                  Nuevo Registro
-                </button>
-              </div>
+              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                <div className="flex gap-4 mb-8">
+                  <button 
+                    className={`flex-1 py-3 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${addRosterMode === 'existing' ? 'bg-primary text-black border-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                    onClick={() => setAddRosterMode('existing')}
+                  >
+                    Existente
+                  </button>
+                  <button 
+                    className={`flex-1 py-3 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${addRosterMode === 'new' ? 'bg-primary text-black border-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
+                    onClick={() => setAddRosterMode('new')}
+                  >
+                    Nuevo Registro
+                  </button>
+                </div>
+              )}
 
               <form onSubmit={handleAddRoster} className="space-y-6">
                 {addRosterMode === 'existing' ? (
@@ -410,12 +419,14 @@ const TeamsView = () => {
           >
             Equipos
           </button>
-          <button 
-            className={`flex-1 sm:flex-none px-8 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest ${activeTab === 'staff' ? 'bg-primary text-black shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
-            onClick={() => setActiveTab('staff')}
-          >
-            Staff / Coaches
-          </button>
+          {user?.role !== 'coach' && (
+            <button 
+              className={`flex-1 sm:flex-none px-8 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest ${activeTab === 'staff' ? 'bg-primary text-black shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
+              onClick={() => setActiveTab('staff')}
+            >
+              Staff / Coaches
+            </button>
+          )}
         </div>
         
         {(user?.role === 'admin' || user?.role === 'superadmin') && (

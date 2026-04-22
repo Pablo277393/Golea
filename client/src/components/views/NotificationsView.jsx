@@ -20,20 +20,10 @@ const NotificationsView = () => {
      title: '',
     message: '',
     scope: user?.role === 'coach' ? 'team' : 'global',
-    team_ids: [],
-    target_roles: []
+    team_ids: []
   });
 
-   const allRoles = [
-    { id: 'coach', label: 'Cuerpo Técnico', icon: User },
-    { id: 'player', label: 'Jugadores', icon: Users },
-    { id: 'parent', label: 'Padres/Tutores', icon: Globe },
-    { id: 'admin', label: 'Administradores', icon: CheckCircle2 }
-  ];
-
-  const allowedRoles = user?.role === 'coach' 
-    ? allRoles.filter(r => ['coach', 'player', 'parent'].includes(r.id))
-    : allRoles;
+ 
 
   const fetchNotifications = async () => {
     try {
@@ -52,45 +42,40 @@ const NotificationsView = () => {
   };
 
   useEffect(() => {
-    fetchNotifications();
-    if (isStaff) {
-      teamService.getTeams().then(res => {
-        setTeams(res.data);
-        if (res.data.length > 0 && user?.role === 'coach') {
-          setFormData(prev => ({ ...prev, team_ids: [res.data[0].id] }));
-        }
-      });
+    if (user) {
+      fetchNotifications();
+      if (isStaff) {
+        teamService.getTeams({ managedOnly: user?.role === 'coach' }).then(res => {
+          setTeams(res.data);
+          if (res.data.length > 0 && user?.role === 'coach') {
+            setFormData(prev => ({ ...prev, team_ids: [res.data[0].id] }));
+          }
+        });
+      }
     }
-  }, []);
+  }, [user, isStaff]);
 
-  const handleRoleToggle = (roleId) => {
-    setFormData(prev => ({
-      ...prev,
-      target_roles: prev.target_roles.includes(roleId)
-        ? prev.target_roles.filter(r => r !== roleId)
-        : [...prev.target_roles, roleId]
-    }));
-  };
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.target_roles.length === 0 && formData.scope === 'global') {
-      // If none selected but global, we can send it or warn
+    
+    if (formData.scope === 'team' && formData.team_ids.length === 0) {
+      alert('Por favor, seleccione al menos un equipo.');
+      return;
     }
     
     setSending(true);
     try {
        await notificationService.sendNotification({
         ...formData,
-        target_roles: formData.target_roles.join(','),
         type: 'informative'
       });
       setFormData({ 
         title: '', 
         message: '', 
         scope: user?.role === 'coach' ? 'team' : 'global', 
-        team_ids: teams.length > 0 && user?.role === 'coach' ? [teams[0].id] : [],
-        target_roles: [] 
+        team_ids: teams.length > 0 && user?.role === 'coach' ? [teams[0].id] : []
       });
       alert('¡Notificación enviada con éxito!');
       fetchNotifications();
@@ -170,7 +155,7 @@ const NotificationsView = () => {
                       ? 'bg-primary/5 text-primary border-primary/20' 
                       : 'bg-slate-500/5 text-slate-400 border-slate-500/20'
                     }`}>
-                      {n.target_roles ? `Para: ${n.target_roles}` : (n.scope === 'team' ? 'Alcance Equipo' : 'Difusión Global')}
+                      {n.scope === 'team' ? 'Alcance Equipo' : 'Difusión Global'}
                     </span>
                     
                     {!n.is_read && (
@@ -285,47 +270,13 @@ const NotificationsView = () => {
                 </div>
               </div>
 
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center bg-slate-500/10 p-2 rounded-lg mb-2">
-                    <label className="label-base mb-0">Roles Destino</label>
-                    <button 
-                      type="button"
-                       onClick={() => setFormData(prev => ({
-                        ...prev, 
-                        target_roles: prev.target_roles.length === allowedRoles.length ? [] : allowedRoles.map(r => r.id)
-                      }))}
-                      className="text-[10px] font-bold text-primary uppercase tracking-widest hover:underline"
-                    >
-                      {formData.target_roles.length === allowedRoles.length ? 'Limpiar Selección' : 'Seleccionar Todo'}
-                    </button>
-                  </div>
-                   <div className="grid grid-cols-1 gap-2">
-                    {allowedRoles.map(r => (
-                      <button
-                        key={r.id}
-                        type="button"
-                        onClick={() => handleRoleToggle(r.id)}
-                        className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                          formData.target_roles.includes(r.id)
-                            ? 'bg-primary/20 border-primary text-primary'
-                            : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <r.icon size={18} />
-                          <span className="text-xs font-bold uppercase tracking-wider">{r.label}</span>
-                        </div>
-                        {formData.target_roles.includes(r.id) && <CheckCircle2 size={16} />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+
 
                 <Button 
                   variant="primary" 
                   className="w-full py-4 rounded-2xl" 
                   icon={CheckCircle2}
-                  disabled={sending || !formData.title || !formData.message || formData.target_roles.length === 0}
+                  disabled={sending || !formData.title || !formData.message}
                   type="submit"
                 >
                   {sending ? 'Lanzando...' : 'Lanzar Notificación'}

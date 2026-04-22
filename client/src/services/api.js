@@ -25,7 +25,7 @@ export const authService = {
 };
 
 export const teamService = {
-  getTeams: () => api.get('/teams'),
+  getTeams: (params) => api.get('/teams', { params }),
   getTeam: (id) => api.get(`/teams/${id}`),
   createTeam: (data) => api.post('/teams', data),
   updateTeam: (id, data) => api.put(`/teams/${id}`, data),
