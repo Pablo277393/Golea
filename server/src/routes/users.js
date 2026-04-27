@@ -8,8 +8,8 @@ router.get('/me', authenticateToken, (req, res) => {
   res.json(req.user);
 });
 
-// Get users by role (admin only)
-router.get('/', authenticateToken, authorizeRoles('admin', 'superadmin'), userController.getUsersByRole);
+// Get users by role (admin and coach)
+router.get('/', authenticateToken, authorizeRoles('admin', 'superadmin', 'coach'), userController.getUsersByRole);
 
 // Create detailed user (superadmin only)
 router.post('/', authenticateToken, authorizeRoles('superadmin'), userController.createUser);

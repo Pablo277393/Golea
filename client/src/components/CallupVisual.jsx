@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, CheckCircle2, Circle, User } from 'lucide-react';
 import Button from './ui/Button';
 
-const CallupVisual = ({ players, onSelectionChange }) => {
-  const [selectedIds, setSelectedIds] = useState([]);
+const CallupVisual = ({ players, initialSelected = [], onSelectionChange, onConfirm }) => {
+  const [selectedIds, setSelectedIds] = useState(initialSelected);
+
+  useEffect(() => {
+    setSelectedIds(initialSelected);
+  }, [initialSelected]);
 
   const togglePlayer = (id) => {
-    const newSelected = selectedIds.includes(id) 
-      ? selectedIds.filter(p => p !== id) 
+    const newSelected = selectedIds.includes(id)
+      ? selectedIds.filter(p => p !== id)
       : [...selectedIds, id];
     setSelectedIds(newSelected);
     if (onSelectionChange) onSelectionChange(newSelected);
@@ -19,14 +23,13 @@ const CallupVisual = ({ players, onSelectionChange }) => {
         {players.map((player) => {
           const isSelected = selectedIds.includes(player.id);
           return (
-            <div 
+            <div
               key={player.id}
               onClick={() => togglePlayer(player.id)}
-              className={`relative p-6 rounded-2xl cursor-pointer transition-all duration-300 text-center border group ${
-                isSelected 
-                ? 'bg-primary/10 border-primary shadow-gold-glow' 
-                : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.08]'
-              }`}
+              className={`relative p-6 rounded-2xl cursor-pointer transition-all duration-300 text-center border group ${isSelected
+                  ? 'bg-primary/10 border-primary shadow-gold-glow'
+                  : 'bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/[0.08]'
+                }`}
             >
               <div className="absolute top-3 right-3">
                 {isSelected ? (
@@ -36,11 +39,10 @@ const CallupVisual = ({ players, onSelectionChange }) => {
                 )}
               </div>
 
-              <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center border transition-all duration-300 ${
-                isSelected 
-                ? 'bg-primary text-dark border-primary scale-110 shadow-gold/20 shadow-lg' 
-                : 'bg-white/5 text-slate-400 border-white/10 group-hover:border-primary/30 group-hover:text-primary-light'
-              }`}>
+              <div className={`w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center border transition-all duration-300 ${isSelected
+                  ? 'bg-primary text-dark border-primary scale-110 shadow-gold/20 shadow-lg'
+                  : 'bg-white/5 text-slate-400 border-white/10 group-hover:border-primary/30 group-hover:text-primary-light'
+                }`}>
                 {player.jerseyNumber ? (
                   <span className="text-xl font-bold">{player.jerseyNumber}</span>
                 ) : (
@@ -71,11 +73,12 @@ const CallupVisual = ({ players, onSelectionChange }) => {
             </p>
           </div>
         </div>
-        
-        <Button 
-          variant="primary" 
+
+        <Button
+          variant="primary"
           disabled={selectedIds.length === 0}
           className="w-full sm:w-auto px-8"
+          onClick={() => onConfirm && onConfirm(selectedIds)}
         >
           Confirmar Convocatoria
         </Button>

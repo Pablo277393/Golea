@@ -1,21 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  matchService, 
+import {
+  matchService,
   teamService,
-  parentService
+  parentService,
+  trainingService
 } from '../../services/api';
-import { 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Plus, 
-  ArrowLeft, 
-  ClipboardCheck, 
-  X, 
-  Search, 
-  Trophy, 
-  Swords, 
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  Plus,
+  ArrowLeft,
+  ClipboardCheck,
+  X,
+  Search,
+  Trophy,
+  Swords,
   ArrowRight,
   Send,
   Trash2,
@@ -24,7 +25,8 @@ import {
   Info,
   ChevronLeft,
   ChevronRight,
-  LayoutList
+  LayoutList,
+  User
 } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -39,7 +41,8 @@ const ScheduleView = () => {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('list');
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  
+  const [callups, setCallups] = useState([]);
+
   const [formData, setFormData] = useState({
     team_id: '',
     opponent: '',
@@ -47,15 +50,14 @@ const ScheduleView = () => {
     match_time: '10:00',
     location: '',
     is_home: 1,
-    convocation: '',
     notes: ''
   });
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const fetchMatchesPromise = user?.role?.toLowerCase() === 'parent' 
-        ? parentService.getCalendarMatches() 
+      const fetchMatchesPromise = user?.role?.toLowerCase() === 'parent'
+        ? parentService.getCalendarMatches()
         : matchService.getMatches();
 
       const [matchesRes, teamsRes] = await Promise.all([
@@ -75,6 +77,21 @@ const ScheduleView = () => {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    if (selectedMatch) {
+      fetchCallups(selectedMatch.id);
+    }
+  }, [selectedMatch]);
+
+  const fetchCallups = async (matchId) => {
+    try {
+      const res = await trainingService.getCallups('match', matchId);
+      setCallups(res.data);
+    } catch (err) {
+      console.error('Error fetching callups:', err);
+    }
+  };
+
   const handleCreateMatch = async (e) => {
     e.preventDefault();
     try {
@@ -90,7 +107,6 @@ const ScheduleView = () => {
         match_time: '10:00',
         location: '',
         is_home: 1,
-        convocation: '',
         notes: ''
       });
       fetchData();
@@ -160,18 +176,18 @@ const ScheduleView = () => {
     return (
       <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
         <div className="flex justify-between items-center">
-          <Button 
-            variant="secondary" 
-            onClick={() => setSelectedMatch(null)} 
-            className="px-4 py-2 text-sm" 
+          <Button
+            variant="secondary"
+            onClick={() => setSelectedMatch(null)}
+            className="px-4 py-2 text-sm"
             icon={ArrowLeft}
           >
             Volver
           </Button>
 
           {isAdmin && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => handleDelete(selectedMatch.id)}
               className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
               icon={Trash2}
@@ -184,7 +200,7 @@ const ScheduleView = () => {
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-               <h2 className="text-4xl font-bold tracking-tight">
+              <h2 className="text-4xl font-bold tracking-tight">
                 Detalle del <span className="text-gold-glow">Partido</span>
               </h2>
               {selectedMatch.published ? (
@@ -197,88 +213,99 @@ const ScheduleView = () => {
               {selectedMatch.team_name} • {selectedMatch.is_home ? 'Local' : 'Visitante'}
             </p>
           </div>
-          
+
           {!selectedMatch.published && isStaff && (
-             <Button variant="primary" icon={Send} onClick={() => handlePublish(selectedMatch.id)}>
-                Publicar Ahora
-             </Button>
+            <Button variant="primary" icon={Send} onClick={() => handlePublish(selectedMatch.id)}>
+              Publicar Ahora
+            </Button>
           )}
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <Card className="lg:col-span-2 p-8" hover={false}>
+        <div className="max-w-5xl">
+          <Card className="p-8" hover={false}>
             <div className="flex items-center gap-4 mb-10">
-               <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <Swords size={32} className="text-primary" />
-               </div>
-                <div>
-                  <h3 className="text-3xl font-bold">vs {selectedMatch.opponent}</h3>
-                  <div className="flex items-center gap-3 mt-2">
-                    <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-widest">{selectedMatch.team_id === 1 ? 'Primer Equipo - Élite' : 'Competición Oficial'}</span>
-                    {selectedMatch.player_username && (
-                      <span className="px-3 py-1 bg-white/5 text-slate-400 border border-white/5 rounded-full text-[10px] font-black uppercase tracking-[0.15em]">
-                        Jugador: {selectedMatch.player_first_name || selectedMatch.player_username}
-                      </span>
-                    )}
-                  </div>
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Swords size={32} className="text-primary" />
+              </div>
+              <div>
+                <h3 className="text-3xl font-bold">vs {selectedMatch.opponent}</h3>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-widest">{selectedMatch.team_id === 1 ? 'Primer Equipo - Élite' : 'Competición Oficial'}</span>
+                  {selectedMatch.player_username && (
+                    <span className="px-3 py-1 bg-white/5 text-slate-400 border border-white/5 rounded-full text-[10px] font-black uppercase tracking-[0.15em]">
+                      Jugador: {selectedMatch.player_first_name || selectedMatch.player_username}
+                    </span>
+                  )}
                 </div>
+              </div>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 p-6 bg-white/5 rounded-2xl border border-white/5">
               <div className="flex items-center gap-4">
                 <Calendar size={20} className="text-primary" />
                 <div>
-                   <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Fecha</p>
-                   <p className="font-bold text-slate-200">{selectedMatch.match_date}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Fecha</p>
+                  <p className="font-bold text-slate-200">{selectedMatch.match_date}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <Clock size={20} className="text-primary" />
                 <div>
-                   <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Hora</p>
-                   <p className="font-bold text-slate-200">{selectedMatch.match_time.substring(0, 5)}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Hora</p>
+                  <p className="font-bold text-slate-200">{selectedMatch.match_time.substring(0, 5)}</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <MapPin size={20} className="text-primary" />
                 <div>
-                   <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Lugar</p>
-                   <p className="font-bold text-slate-200">{selectedMatch.location || 'Por definir'}</p>
+                  <p className="text-[10px] uppercase font-bold text-slate-500 tracking-widest">Lugar</p>
+                  <p className="font-bold text-slate-200">{selectedMatch.location || 'Por definir'}</p>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-6">
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-400">
-                    <Info size={16} className="text-primary" /> Notas del Entrenador
-                  </h4>
-                  <p className="text-slate-300 font-medium leading-relaxed bg-black/20 p-6 rounded-xl border border-white/5 italic">
-                      {selectedMatch.notes || '"Sin observaciones adicionales para este encuentro."'}
-                  </p>
-                </div>
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                  <Info size={16} className="text-primary" /> Notas del Entrenador
+                </h4>
+                <p className="text-slate-300 font-medium leading-relaxed bg-black/20 p-6 rounded-xl border border-white/5 italic">
+                  {selectedMatch.notes || '"Sin observaciones adicionales para este encuentro."'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold flex items-center gap-2 uppercase tracking-widest text-slate-400">
+                  <ClipboardCheck size={16} className="text-primary" /> Jugadores Convocados
+                </h4>
+                {callups.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {callups.map((player) => (
+                      <div key={player.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
+                          <span className="text-primary font-bold text-sm">
+                            {player.jersey_number || <User size={14} />}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-200 text-sm">
+                            {player.first_name || player.last_name ? `${player.first_name || ''} ${player.last_name || ''}` : player.username}
+                          </p>
+                          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{player.position || 'Sin posición'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center bg-black/20 rounded-xl border border-white/5 border-dashed">
+                    <p className="text-xs font-bold uppercase tracking-widest text-slate-500">No hay convocatoria publicada para este partido</p>
+                  </div>
+                )}
+              </div>
             </div>
           </Card>
 
-          <Card className="p-0 border-white/5 overflow-hidden" hover={false}>
-            <div className="p-8 border-b border-white/5 bg-white/5">
-              <h3 className="text-xl font-bold flex items-center gap-3">
-                <ClipboardCheck size={24} className="text-primary" /> Convocatoria
-              </h3>
-            </div>
-            <div className="p-8 min-h-[200px]">
-               {selectedMatch.convocation ? (
-                  <div className="whitespace-pre-wrap text-slate-400 font-medium leading-relaxed">
-                     {selectedMatch.convocation}
-                  </div>
-               ) : (
-                  <div className="flex flex-col items-center justify-center h-full opacity-30 text-center">
-                     <AlertCircle size={32} className="mb-2" />
-                     <p className="text-xs font-bold uppercase tracking-widest">Lista no disponible</p>
-                  </div>
-               )}
-            </div>
-          </Card>
+
         </div>
       </div>
     );
@@ -291,16 +318,16 @@ const ScheduleView = () => {
           <h2 className="text-4xl lg:text-5xl font-bold tracking-tight mb-2">Calendario de Partidos</h2>
           <p className="text-slate-400 font-medium">Gestión de encuentros y comunicación oficial.</p>
         </div>
-        
+
         <div className="flex items-center gap-3 w-full sm:w-auto">
           <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
-            <button 
+            <button
               onClick={() => setViewMode('list')}
               className={`p-2 px-4 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'list' ? 'bg-primary text-dark shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
             >
               <LayoutList size={16} /> Lista
             </button>
-            <button 
+            <button
               onClick={() => setViewMode('calendar')}
               className={`p-2 px-4 rounded-lg flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all ${viewMode === 'calendar' ? 'bg-primary text-dark shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
             >
@@ -309,9 +336,9 @@ const ScheduleView = () => {
           </div>
 
           {isStaff && (
-            <Button 
-              variant={showForm ? 'secondary' : 'primary'} 
-              onClick={() => setShowForm(!showForm)} 
+            <Button
+              variant={showForm ? 'secondary' : 'primary'}
+              onClick={() => setShowForm(!showForm)}
               icon={showForm ? X : Plus}
               className="flex-1 sm:flex-none"
             >
@@ -326,10 +353,10 @@ const ScheduleView = () => {
           <form onSubmit={handleCreateMatch} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="label-base">Equipo</label>
-              <select 
+              <select
                 required
-                value={formData.team_id} 
-                onChange={(e) => setFormData({...formData, team_id: e.target.value})} 
+                value={formData.team_id}
+                onChange={(e) => setFormData({ ...formData, team_id: e.target.value })}
                 className="input-base cursor-pointer"
               >
                 <option value="">Seleccionar Equipo...</option>
@@ -341,7 +368,7 @@ const ScheduleView = () => {
             <Input
               label="Rival"
               value={formData.opponent}
-              onChange={(e) => setFormData({...formData, opponent: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, opponent: e.target.value })}
               placeholder="Nombre del club rival"
               required
             />
@@ -349,56 +376,47 @@ const ScheduleView = () => {
               label="Fecha"
               type="date"
               value={formData.match_date}
-              onChange={(e) => setFormData({...formData, match_date: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, match_date: e.target.value })}
               required
             />
             <Input
               label="Hora"
               type="time"
               value={formData.match_time}
-              onChange={(e) => setFormData({...formData, match_time: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, match_time: e.target.value })}
               required
             />
             <Input
               label="Localización"
               value={formData.location}
-              onChange={(e) => setFormData({...formData, location: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="Estadio / Ciudad Deportiva"
               icon={MapPin}
             />
             <div className="space-y-2">
               <label className="label-base">Campo</label>
-              <select 
-                value={formData.is_home} 
-                onChange={(e) => setFormData({...formData, is_home: parseInt(e.target.value)})} 
+              <select
+                value={formData.is_home}
+                onChange={(e) => setFormData({ ...formData, is_home: parseInt(e.target.value) })}
                 className="input-base cursor-pointer"
               >
                 <option value={1}>Local</option>
                 <option value={0}>Visitante</option>
               </select>
             </div>
-            
-            <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="label-base">Convocatoria (Lista de jugadores)</label>
-                <textarea 
-                  value={formData.convocation} 
-                  onChange={(e) => setFormData({...formData, convocation: e.target.value})} 
-                  placeholder="Ej: Marc, David, Pau..."
-                  className="input-base min-h-[120px] py-4"
-                />
-              </div>
+
+            <div className="lg:col-span-3">
               <div className="space-y-2">
                 <label className="label-base">Notas / Instrucciones</label>
-                <textarea 
-                  value={formData.notes} 
-                  onChange={(e) => setFormData({...formData, notes: e.target.value})} 
+                <textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                   placeholder="Indicaciones tácticas, hora de llegada, etc."
                   className="input-base min-h-[120px] py-4"
                 />
               </div>
             </div>
-            
+
             <div className="lg:col-span-3 pt-4">
               <Button type="submit" variant="primary" className="w-full py-4 text-lg" icon={Plus}>
                 Guardar como Borrador
@@ -414,17 +432,16 @@ const ScheduleView = () => {
       {viewMode === 'list' ? (
         <div className="space-y-4">
           {matches.length > 0 ? matches.map(match => (
-            <Card 
-              key={match.id} 
+            <Card
+              key={match.id}
               className={`p-1 px-8 lg:px-10 transition-all duration-300 ${match.published ? 'hover:border-primary/40' : 'border-yellow-500/10 bg-yellow-500/[0.01]'}`}
               hover={match.published}
             >
               <div className="flex flex-col lg:flex-row items-center justify-between gap-8 py-6">
                 <div className="flex flex-col lg:flex-row items-center gap-8 w-full">
                   {/* Date Plate */}
-                  <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-2xl border shadow-glass shrink-0 transition-colors ${
-                    match.published ? 'bg-white/5 border-white/10 text-white' : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-500/70'
-                  }`}>
+                  <div className={`flex flex-col items-center justify-center w-20 h-20 rounded-2xl border shadow-glass shrink-0 transition-colors ${match.published ? 'bg-white/5 border-white/10 text-white' : 'bg-yellow-500/5 border-yellow-500/20 text-yellow-500/70'
+                    }`}>
                     <span className="text-3xl font-bold leading-none">{getDay(match.match_date)}</span>
                     <span className="text-[10px] font-extrabold uppercase tracking-widest mt-1 opacity-60">2026</span>
                   </div>
@@ -439,11 +456,10 @@ const ScheduleView = () => {
                           {match.player_first_name || match.player_username}
                         </span>
                       )}
-                      <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] border ${
-                        match.published 
-                        ? 'bg-primary/10 text-primary border-primary/20' 
-                        : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                      }`}>
+                      <span className={`px-3 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-[0.2em] border ${match.published
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                        }`}>
                         {match.published ? 'Publicado' : 'Borrador'}
                       </span>
                       <span className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
@@ -451,7 +467,7 @@ const ScheduleView = () => {
                       </span>
                     </div>
                     <h4 className="text-2xl font-bold group-hover:text-primary transition-colors">vs {match.opponent}</h4>
-                    
+
                     <div className="flex flex-wrap justify-center lg:justify-start items-center gap-6 text-sm text-slate-500 font-medium">
                       <span className="flex items-center gap-2">
                         <Clock size={16} className="text-primary/70" /> {match.match_time.substring(0, 5)}
@@ -464,19 +480,19 @@ const ScheduleView = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="shrink-0 w-full lg:w-auto flex flex-col sm:flex-row gap-3">
-                   {!match.published && isStaff && (
-                      <Button 
-                        variant="primary" 
-                        onClick={() => handlePublish(match.id)}
-                        icon={Send}
-                        className="w-full sm:w-auto px-6"
-                      >
-                        Publicar
-                      </Button>
-                   )}
-                   <Button 
+                  {!match.published && isStaff && (
+                    <Button
+                      variant="primary"
+                      onClick={() => handlePublish(match.id)}
+                      icon={Send}
+                      className="w-full sm:w-auto px-6"
+                    >
+                      Publicar
+                    </Button>
+                  )}
+                  <Button
                     variant="secondary"
                     onClick={() => setSelectedMatch(match)}
                     icon={ArrowRight}
@@ -512,7 +528,7 @@ const ScheduleView = () => {
                 {d}
               </div>
             ))}
-            
+
             {Array.from({ length: (getDaysInMonth(currentMonth).firstDay + 6) % 7 }).map((_, i) => (
               <div key={`empty-${i}`} className="h-32 bg-white/[0.02] rounded-2xl border border-white/5 opacity-20" />
             ))}
@@ -521,13 +537,13 @@ const ScheduleView = () => {
               const day = i + 1;
               const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
               const dayMatches = matches.filter(m => m.match_date === dateStr);
-              
+
               return (
                 <div key={day} className={`h-32 p-3 rounded-2xl border transition-all ${dayMatches.length > 0 ? 'bg-primary/5 border-primary/20' : 'bg-white/5 border-white/5'}`}>
                   <span className={`text-sm font-bold ${dayMatches.length > 0 ? 'text-primary' : 'text-slate-500'}`}>{day}</span>
                   <div className="mt-2 space-y-1">
                     {dayMatches.map(m => (
-                      <button 
+                      <button
                         key={m.id}
                         onClick={() => setSelectedMatch(m)}
                         className="w-full text-left p-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all overflow-hidden"

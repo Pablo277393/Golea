@@ -1,13 +1,13 @@
 import React from 'react';
 
-const Input = ({ 
-  label, 
-  id, 
-  type = 'text', 
-  error, 
+const Input = ({
+  label,
+  id,
+  type = 'text',
+  error,
   icon: Icon,
   className = '',
-  ...props 
+  ...props
 }) => {
   return (
     <div className={`space-y-2 ${className}`}>
@@ -18,7 +18,7 @@ const Input = ({
       )}
       <div className="relative group">
         {Icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors">
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-primary transition-colors">
             <Icon size={18} />
           </div>
         )}

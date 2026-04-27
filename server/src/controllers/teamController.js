@@ -5,7 +5,7 @@ exports.getTeams = async (req, res) => {
   try {
     let sql;
     let params;
-    
+
     if (managedOnly && req.user.role === 'coach') {
       sql = `
         SELECT t.*, p.first_name || ' ' || p.last_name as coach_name 
@@ -73,11 +73,11 @@ exports.createTeam = async (req, res) => {
       'INSERT INTO teams (name, category, coach_id) VALUES ($1, $2, $3)',
       [name, category, coach_id]
     );
-    
+
     // SQLite compatibility: use lastID if RETURNING not available
     const newTeamId = result.lastID || (result.rows && result.rows[0]?.id);
     const fetchNew = await db.query('SELECT * FROM teams WHERE id = $1', [newTeamId]);
-    
+
     res.status(201).json(fetchNew.rows[0]);
   } catch (err) {
     console.error(err);
@@ -140,10 +140,10 @@ exports.deleteTeam = async (req, res) => {
     await db.query('DELETE FROM matches WHERE team_id = $1', [id]);
     await db.query('DELETE FROM trainings WHERE team_id = $1', [id]);
     await db.query('DELETE FROM notifications WHERE team_id = $1', [id]);
-    
+
     // Finally delete the team
     const result = await db.query('DELETE FROM teams WHERE id = $1', [id]);
-    
+
     res.json({ message: 'Equipo eliminado correctamente' });
   } catch (err) {
     console.error(err);

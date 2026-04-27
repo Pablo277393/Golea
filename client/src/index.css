@@ -10,6 +10,7 @@
     --bg-dark: #0a0a0a;
     --bg-card: #141414;
     --border-dark: #262626;
+    color-scheme: dark;
   }
 
   body {
@@ -48,5 +49,11 @@
 
   .label-base {
     @apply block mb-2 text-xs font-semibold uppercase tracking-widest text-slate-400;
+  }
+
+  /* Fix for native select dropdowns in dark mode */
+  select option {
+    background-color: #1a1a1a;
+    color: white;
   }
 }

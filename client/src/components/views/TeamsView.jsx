@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { teamService, authService } from '../../services/api';
-import { 
-  Users, 
-  Plus, 
-  ArrowLeft, 
-  UserCircle, 
-  Shield, 
-  Briefcase, 
+import {
+  Users,
+  Plus,
+  ArrowLeft,
+  UserCircle,
+  Shield,
+  Briefcase,
   ArrowRight,
   X,
   Mail,
@@ -33,12 +33,12 @@ const TeamsView = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamPlayers, setTeamPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modal States
   const [showCreateTeam, setShowCreateTeam] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false); // For both coach and player
   const [showAddPlayerToRoster, setShowAddPlayerToRoster] = useState(false);
-  
+
   // Form Logic States
   const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
   const [teamModalMode, setTeamModalMode] = useState('create'); // 'create' or 'edit'
@@ -52,8 +52,8 @@ const TeamsView = () => {
   const [userForm, setUserForm] = useState({
     username: '', email: '', password: '', firstName: '', lastName: '', phone: '', bio: ''
   });
-  const [rosterForm, setRosterForm] = useState({ 
-    player_id: '', jersey_number: '', position: '' 
+  const [rosterForm, setRosterForm] = useState({
+    player_id: '', jersey_number: '', position: ''
   });
 
   const [availablePlayers, setAvailablePlayers] = useState([]);
@@ -315,7 +315,7 @@ const TeamsView = () => {
             </table>
           </div>
         </Card>
-        
+
         {/* Modal: Add Player to Roster */}
         {showAddPlayerToRoster && (
           <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
@@ -328,13 +328,13 @@ const TeamsView = () => {
 
               {(user?.role === 'admin' || user?.role === 'superadmin') && (
                 <div className="flex gap-4 mb-8">
-                  <button 
+                  <button
                     className={`flex-1 py-3 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${addRosterMode === 'existing' ? 'bg-primary text-black border-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
                     onClick={() => setAddRosterMode('existing')}
                   >
                     Existente
                   </button>
-                  <button 
+                  <button
                     className={`flex-1 py-3 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${addRosterMode === 'new' ? 'bg-primary text-black border-primary' : 'bg-white/5 border-white/10 text-slate-400'}`}
                     onClick={() => setAddRosterMode('new')}
                   >
@@ -347,26 +347,26 @@ const TeamsView = () => {
                 {addRosterMode === 'existing' ? (
                   <div className="space-y-2">
                     <label className="label-base">Seleccionar Jugador</label>
-                    <select required className="input-base" value={rosterForm.player_id} onChange={(e) => setRosterForm({...rosterForm, player_id: e.target.value})}>
+                    <select required className="input-base" value={rosterForm.player_id} onChange={(e) => setRosterForm({ ...rosterForm, player_id: e.target.value })}>
                       <option value="">Seleccione...</option>
                       {availablePlayers.map(p => <option key={p.id} value={p.id}>{p.username} ({p.email})</option>)}
                     </select>
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 gap-4">
-                    <Input label="Usuario" value={userForm.username} onChange={(e) => setUserForm({...userForm, username: e.target.value})} required icon={User} />
-                    <Input label="Email" type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} required icon={Mail} />
-                    <Input label="Nombre" value={userForm.firstName} onChange={(e) => setUserForm({...userForm, firstName: e.target.value})} required />
-                    <Input label="Apellidos" value={userForm.lastName} onChange={(e) => setUserForm({...userForm, lastName: e.target.value})} required />
+                    <Input label="Usuario" value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} required icon={User} />
+                    <Input label="Email" type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} required icon={Mail} />
+                    <Input label="Nombre" value={userForm.firstName} onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })} required />
+                    <Input label="Apellidos" value={userForm.lastName} onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })} required />
                     <div className="col-span-2">
-                      <Input label="Contraseña" type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} placeholder="Dejar vacío para 'golea2026'" icon={Lock} />
+                      <Input label="Contraseña" type="password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} placeholder="Dejar vacío para 'golea2026'" icon={Lock} />
                     </div>
                   </div>
                 )}
 
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="Dorsal" type="number" value={rosterForm.jersey_number} onChange={(e) => setRosterForm({...rosterForm, jersey_number: e.target.value})} required icon={Hash} />
-                  <Input label="Posición" value={rosterForm.position} onChange={(e) => setRosterForm({...rosterForm, position: e.target.value})} required icon={Activity} />
+                  <Input label="Dorsal" type="number" value={rosterForm.jersey_number} onChange={(e) => setRosterForm({ ...rosterForm, jersey_number: e.target.value })} required icon={Hash} />
+                  <Input label="Posición" value={rosterForm.position} onChange={(e) => setRosterForm({ ...rosterForm, position: e.target.value })} required icon={Activity} />
                 </div>
 
                 <Button type="submit" variant="primary" className="w-full py-4 text-lg">
@@ -376,7 +376,7 @@ const TeamsView = () => {
             </Card>
           </div>
         )}
-        
+
         {/* Reusable User Edit Modal */}
         {showUserModal && (
           <div className="fixed inset-0 z-[501] flex items-center justify-center p-4">
@@ -388,16 +388,16 @@ const TeamsView = () => {
               </div>
               <form onSubmit={handleUserSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input label="Usuario" value={userForm.username} onChange={(e) => setUserForm({...userForm, username: e.target.value})} required icon={User} />
-                  <Input label="Email" type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} required icon={Mail} />
-                  <Input label="Nombre" value={userForm.firstName} onChange={(e) => setUserForm({...userForm, firstName: e.target.value})} required />
-                  <Input label="Apellidos" value={userForm.lastName} onChange={(e) => setUserForm({...userForm, lastName: e.target.value})} required />
-                  <Input label="Teléfono" value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} icon={Activity} />
-                  <Input label="Password (Opcional)" type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} placeholder="Cambiar contraseña..." icon={Lock} />
+                  <Input label="Usuario" value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} required icon={User} />
+                  <Input label="Email" type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} required icon={Mail} />
+                  <Input label="Nombre" value={userForm.firstName} onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })} required />
+                  <Input label="Apellidos" value={userForm.lastName} onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })} required />
+                  <Input label="Teléfono" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} icon={Activity} />
+                  <Input label="Password (Opcional)" type="password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} placeholder="Cambiar contraseña..." icon={Lock} />
                 </div>
                 <div className="space-y-2">
                   <label className="label-base">Biografía/Notas</label>
-                  <textarea className="input-base" rows="3" value={userForm.bio} onChange={(e) => setUserForm({...userForm, bio: e.target.value})}></textarea>
+                  <textarea className="input-base" rows="3" value={userForm.bio} onChange={(e) => setUserForm({ ...userForm, bio: e.target.value })}></textarea>
                 </div>
                 <Button type="submit" variant="primary" className="w-full py-3">Actualizar Registro</Button>
               </form>
@@ -413,14 +413,14 @@ const TeamsView = () => {
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <header className="flex flex-col sm:flex-row justify-between items-center gap-6">
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 w-full sm:w-auto">
-          <button 
+          <button
             className={`flex-1 sm:flex-none px-8 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest ${activeTab === 'teams' ? 'bg-primary text-black shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
             onClick={() => setActiveTab('teams')}
           >
             Equipos
           </button>
           {user?.role !== 'coach' && (
-            <button 
+            <button
               className={`flex-1 sm:flex-none px-8 py-3 rounded-xl transition-all font-bold text-xs uppercase tracking-widest ${activeTab === 'staff' ? 'bg-primary text-black shadow-gold-glow' : 'text-slate-400 hover:text-white'}`}
               onClick={() => setActiveTab('staff')}
             >
@@ -428,7 +428,7 @@ const TeamsView = () => {
             </button>
           )}
         </div>
-        
+
         {(user?.role === 'admin' || user?.role === 'superadmin') && (
           <div className="flex gap-4 w-full sm:w-auto">
             {activeTab === 'teams' ? (
@@ -448,17 +448,17 @@ const TeamsView = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {teams.map(team => (
             <Card key={team.id} className="group overflow-hidden">
-               {/* Actions Overlay */}
-               {(user?.role === 'admin' || user?.role === 'superadmin') && (
-                 <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <button onClick={() => openTeamModal('edit', team)} className="p-2 rounded-lg bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-all shadow-xl border border-white/10">
-                       <Edit2 size={14} />
-                    </button>
-                    <button onClick={() => handleDeleteTeam(team.id)} className="p-2 rounded-lg bg-red-500/20 backdrop-blur-md hover:bg-red-500/40 text-red-200 transition-all shadow-xl border border-red-500/20">
-                       <Trash2 size={14} />
-                    </button>
-                 </div>
-               )}
+              {/* Actions Overlay */}
+              {(user?.role === 'admin' || user?.role === 'superadmin') && (
+                <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                  <button onClick={() => openTeamModal('edit', team)} className="p-2 rounded-lg bg-white/10 backdrop-blur-md hover:bg-white/20 text-white transition-all shadow-xl border border-white/10">
+                    <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => handleDeleteTeam(team.id)} className="p-2 rounded-lg bg-red-500/20 backdrop-blur-md hover:bg-red-500/40 text-red-200 transition-all shadow-xl border border-red-500/20">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
 
               <div className="flex items-center gap-4 mb-8">
                 <div className="w-14 h-14 rounded-2xl bg-gold-gradient p-[1px] shadow-gold-glow group-hover:scale-110 transition-transform">
@@ -477,8 +477,8 @@ const TeamsView = () => {
                   <span className="text-slate-300 font-bold">{team.coach_name || 'Sin coach'}</span>
                 </div>
               </div>
-              <Button 
-                variant="secondary" 
+              <Button
+                variant="secondary"
                 className="w-full py-4 rounded-xl"
                 onClick={() => handleSelectTeam(team)}
                 icon={ArrowRight}
@@ -506,7 +506,7 @@ const TeamsView = () => {
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-xl bg-gold-gradient p-[1px]">
                           <div className="w-full h-full rounded-xl bg-dark flex items-center justify-center">
-                             <Briefcase size={20} className="text-primary" />
+                            <Briefcase size={20} className="text-primary" />
                           </div>
                         </div>
                         <div>
@@ -516,10 +516,10 @@ const TeamsView = () => {
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                       <div className="flex flex-col gap-1">
-                          <span className="text-slate-300 font-medium text-sm flex items-center gap-2"><Mail size={12} className="text-primary"/> {c.email}</span>
-                          <span className="text-slate-500 text-xs flex items-center gap-2"><Activity size={12}/> {c.phone || 'Sin tlf'}</span>
-                       </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-slate-300 font-medium text-sm flex items-center gap-2"><Mail size={12} className="text-primary" /> {c.email}</span>
+                        <span className="text-slate-500 text-xs flex items-center gap-2"><Activity size={12} /> {c.phone || 'Sin tlf'}</span>
+                      </div>
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center justify-center gap-2">
@@ -549,15 +549,31 @@ const TeamsView = () => {
               <button onClick={() => setShowCreateTeam(false)} className="text-slate-400 hover:text-white"><X size={24} /></button>
             </div>
             <form onSubmit={handleTeamSubmit} className="space-y-6">
-              <Input label="Nombre" placeholder="Senior A" value={teamForm.name} onChange={(e) => setTeamForm({...teamForm, name: e.target.value})} required icon={Shield} />
-              <Input label="Categoría" placeholder="Senior" value={teamForm.category} onChange={(e) => setTeamForm({...teamForm, category: e.target.value})} required icon={Users} />
+              <Input label="Nombre" placeholder="Equipo" value={teamForm.name} onChange={(e) => setTeamForm({ ...teamForm, name: e.target.value })} required icon={Shield} />
+              <Input label="Categoría" placeholder="Categoría" value={teamForm.category} onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })} required icon={Users} />
+
               <div className="space-y-2">
                 <label className="label-base">Asignar Coach</label>
-                <select className="input-base" value={teamForm.coach_id} onChange={(e) => setTeamForm({...teamForm, coach_id: e.target.value})} required>
-                  <option value="">Seleccione...</option>
-                  {availableCoaches.map(c => <option key={c.id} value={c.id}>{c.username}</option>)}
-                </select>
+                <div className="relative group">
+                  <select
+                    className="input-base appearance-none cursor-pointer hover:border-primary/50 transition-colors"
+                    value={teamForm.coach_id}
+                    onChange={(e) => setTeamForm({ ...teamForm, coach_id: e.target.value })}
+                    required
+                  >
+                    <option value="">Seleccione...</option>
+                    {availableCoaches.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.first_name ? `${c.first_name} ${c.last_name} (${c.username})` : c.username}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-primary transition-colors">
+                    <User size={18} />
+                  </div>
+                </div>
               </div>
+
               <Button type="submit" variant="primary" className="w-full py-4 text-lg">
                 {teamModalMode === 'create' ? 'Registrar' : 'Guardar Cambios'}
               </Button>
@@ -577,16 +593,16 @@ const TeamsView = () => {
             </div>
             <form onSubmit={handleUserSubmit} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Usuario" value={userForm.username} onChange={(e) => setUserForm({...userForm, username: e.target.value})} required icon={User} />
-                <Input label="Email" type="email" value={userForm.email} onChange={(e) => setUserForm({...userForm, email: e.target.value})} required icon={Mail} />
-                <Input label="Nombre" value={userForm.firstName} onChange={(e) => setUserForm({...userForm, firstName: e.target.value})} required />
-                <Input label="Apellidos" value={userForm.lastName} onChange={(e) => setUserForm({...userForm, lastName: e.target.value})} required />
-                <Input label="Password" type="password" value={userForm.password} onChange={(e) => setUserForm({...userForm, password: e.target.value})} placeholder={modalMode === 'edit' ? 'Cambiar...' : 'Asignar contraseña'} icon={Lock} required={modalMode === 'create'} />
-                <Input label="Teléfono" value={userForm.phone} onChange={(e) => setUserForm({...userForm, phone: e.target.value})} icon={Activity} />
+                <Input label="Usuario" value={userForm.username} onChange={(e) => setUserForm({ ...userForm, username: e.target.value })} required icon={User} />
+                <Input label="Email" type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} required icon={Mail} />
+                <Input label="Nombre" value={userForm.firstName} onChange={(e) => setUserForm({ ...userForm, firstName: e.target.value })} required />
+                <Input label="Apellidos" value={userForm.lastName} onChange={(e) => setUserForm({ ...userForm, lastName: e.target.value })} required />
+                <Input label="Password" type="password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} placeholder={modalMode === 'edit' ? 'Cambiar...' : 'Asignar contraseña'} icon={Lock} required={modalMode === 'create'} />
+                <Input label="Teléfono" value={userForm.phone} onChange={(e) => setUserForm({ ...userForm, phone: e.target.value })} icon={Activity} />
               </div>
               <div className="space-y-2">
                 <label className="label-base">Biografía</label>
-                <textarea className="input-base" rows="3" value={userForm.bio} onChange={(e) => setUserForm({...userForm, bio: e.target.value})}></textarea>
+                <textarea className="input-base" rows="3" value={userForm.bio} onChange={(e) => setUserForm({ ...userForm, bio: e.target.value })}></textarea>
               </div>
               <Button type="submit" variant="primary" className="w-full py-3">{modalMode === 'create' ? 'Registrar' : 'Actualizar'}</Button>
             </form>

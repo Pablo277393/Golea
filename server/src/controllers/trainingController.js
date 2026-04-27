@@ -41,7 +41,7 @@ exports.getCallups = async (req, res) => {
   const { event_type, event_id } = req.params;
   try {
     const result = await db.query(
-      'SELECT c.*, u.username, p.first_name, p.last_name FROM callups c JOIN users u ON c.player_id = u.id JOIN profiles p ON u.id = p.user_id WHERE event_type = $1 AND event_id = $2',
+      'SELECT c.*, u.username, p.first_name, p.last_name FROM callups c JOIN users u ON c.player_id = u.id LEFT JOIN profiles p ON u.id = p.user_id WHERE event_type = $1 AND event_id = $2',
       [event_type, event_id]
     );
     res.json(result.rows);
@@ -52,28 +52,29 @@ exports.getCallups = async (req, res) => {
 
 exports.updateCallups = async (req, res) => {
   const { event_type, event_id } = req.params;
-  const { player_ids } = req.body; // Array of player IDs to be called
+  const { player_ids } = req.body;
 
-  const client = await db.pool.connect();
   try {
-    await client.query('BEGIN');
+    await db.query('BEGIN');
     
     // Remove existing callups for this event
-    await client.query('DELETE FROM callups WHERE event_type = $1 AND event_id = $2', [event_type, event_id]);
+    await db.query('DELETE FROM callups WHERE event_type = $1 AND event_id = $2', [event_type, event_id]);
     
-    // Insert new callups
+    // Insert new callups one by one
     if (player_ids && player_ids.length > 0) {
-      const values = player_ids.map(pid => `('${event_type}', ${event_id}, ${pid}, 'called')`).join(',');
-      await client.query(`INSERT INTO callups (event_type, event_id, player_id, status) VALUES ${values}`);
+      for (const playerId of player_ids) {
+        await db.query(
+          'INSERT INTO callups (event_type, event_id, player_id, status) VALUES ($1, $2, $3, $4)',
+          [event_type, event_id, playerId, 'called']
+        );
+      }
     }
     
-    await client.query('COMMIT');
+    await db.query('COMMIT');
     res.json({ message: 'Call-ups updated successfully' });
   } catch (err) {
-    await client.query('ROLLBACK');
+    try { await db.query('ROLLBACK'); } catch (e) {}
     console.error(err);
     res.status(500).json({ message: 'Error updating call-ups' });
-  } finally {
-    client.release();
   }
 };
