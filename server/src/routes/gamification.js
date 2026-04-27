@@ -13,6 +13,7 @@ router.get('/prizes/active', authenticateToken, gamificationController.getWeekly
 
 // MVP
 router.get('/mvp/:team_id/:week_number/:year', authenticateToken, gamificationController.getWeeklyMVP);
-router.post('/mvp/vote', authenticateToken, gamificationController.voteMVP);
+router.get('/mvp/:team_id/history', authenticateToken, gamificationController.getTeamMVPHistory);
+router.post('/mvp/select', authenticateToken, gamificationController.selectMVP);
 
 module.exports = router;

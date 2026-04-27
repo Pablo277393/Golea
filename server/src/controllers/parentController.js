@@ -4,14 +4,24 @@ const db = require('../config/db');
  * Get players associated with the parent
  */
 exports.getPlayers = async (req, res) => {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const pastDaysOfYear = (now - startOfYear) / 86400000;
+  const currentWeek = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+  const currentYear = now.getFullYear();
+
   try {
     const result = await db.query(
-      `SELECT u.id, u.username, p.first_name, p.last_name, u.linking_code
+      `SELECT u.id, u.username, p.first_name, p.last_name, u.linking_code,
+              EXISTS (
+                SELECT 1 FROM weekly_mvps mvp 
+                WHERE mvp.player_id = u.id AND mvp.week_number = $2 AND mvp.year = $3
+              ) as is_mvp
        FROM users u
        JOIN parent_player pp ON u.id = pp.player_id
        LEFT JOIN profiles p ON u.id = p.user_id
        WHERE pp.parent_id = $1`,
-      [req.user.id]
+      [req.user.id, currentWeek, currentYear]
     );
     res.json(result.rows);
   } catch (err) {
@@ -59,7 +69,7 @@ exports.linkPlayer = async (req, res) => {
       [req.user.id, playerId]
     );
 
-    res.status(201).json({ 
+    res.status(201).json({
       message: 'Jugador asociado correctamente',
       player: playerResult.rows[0]
     });

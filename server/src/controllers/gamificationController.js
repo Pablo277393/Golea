@@ -14,22 +14,22 @@ exports.getQuinielaMatches = async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
-    
+
     // 1. Get user's/children's teams
     let teamIds = [];
     if (userRole === 'player') {
-       const userTeams = await db.query('SELECT team_id FROM team_players WHERE player_id = $1', [userId]);
-       teamIds = userTeams.rows.map(r => r.team_id);
+      const userTeams = await db.query('SELECT team_id FROM team_players WHERE player_id = $1', [userId]);
+      teamIds = userTeams.rows.map(r => r.team_id);
     } else if (userRole === 'parent') {
-       const childrenTeams = await db.query(
-         'SELECT team_id FROM team_players WHERE player_id IN (SELECT child_id FROM family_relations WHERE parent_id = $1)',
-         [userId]
-       );
-       teamIds = childrenTeams.rows.map(r => r.team_id);
+      const childrenTeams = await db.query(
+        'SELECT team_id FROM team_players WHERE player_id IN (SELECT child_id FROM family_relations WHERE parent_id = $1)',
+        [userId]
+      );
+      teamIds = childrenTeams.rows.map(r => r.team_id);
     } else if (userRole === 'admin' || userRole === 'superadmin') {
-       // Admins see Senior + Fillers
+      // Admins see Senior + Fillers
     }
-    
+
     const now = new Date();
     const today = now.toISOString().split('T')[0];
 
@@ -42,11 +42,11 @@ exports.getQuinielaMatches = async (req, res) => {
        ORDER BY m.match_date ASC LIMIT 1`,
       [today]
     );
-    
+
     // Priority 2: User/Children matches (max 2 if possible)
     let userMatchesResult = [];
     if (teamIds.length > 0) {
-      const placeholders = teamIds.map((_, i) => `$${i+2}`).join(',');
+      const placeholders = teamIds.map((_, i) => `$${i + 2}`).join(',');
       const res = await db.query(
         `SELECT m.*, t.name as team_name 
          FROM matches m 
@@ -57,10 +57,10 @@ exports.getQuinielaMatches = async (req, res) => {
       );
       userMatchesResult = res.rows;
     }
-    
+
     const initialMatches = [...seniorMatches.rows, ...userMatchesResult];
     const selectedIds = initialMatches.map(m => m.id);
-    
+
     // Priority 3: Fillers if < 3
     let fillers = [];
     if (selectedIds.length < 3) {
@@ -76,10 +76,10 @@ exports.getQuinielaMatches = async (req, res) => {
       );
       fillers = res.rows;
     }
-    
+
     const combo = [...initialMatches, ...fillers].slice(0, 3);
     res.json(combo);
-    
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Error fetching quiniela matches' });
@@ -95,18 +95,18 @@ exports.submitPredictions = async (req, res) => {
   try {
     const now = new Date();
     const results = [];
-    
+
     for (const p of predictions) {
       const { match_id, prediction } = p;
-      
+
       // Check closure rule (1 hour before)
       const matchRes = await db.query('SELECT match_date, match_time FROM matches WHERE id = $1', [match_id]);
       if (matchRes.rows.length === 0) continue;
-      
+
       const matchDateTime = new Date(`${matchRes.rows[0].match_date}T${matchRes.rows[0].match_time}`);
       const diffMs = matchDateTime - now;
       const diffMins = diffMs / (1000 * 60);
-      
+
       if (diffMins < 60) {
         // Skip or return error? We'll skip for now but in a real app better to warn
         continue;
@@ -122,7 +122,7 @@ exports.submitPredictions = async (req, res) => {
       );
       results.push(resInsert.rows[0]);
     }
-    
+
     res.json(results);
   } catch (err) {
     console.error(err);
@@ -137,7 +137,7 @@ exports.getWeeklyPrize = async (req, res) => {
     const startOfYear = new Date(now.getFullYear(), 0, 1);
     const pastDaysOfYear = (now - startOfYear) / 86400000;
     const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
-    
+
     const result = await db.query(
       'SELECT * FROM weekly_prizes WHERE active_week = $1 AND year = $2 LIMIT 1',
       [weekNumber, now.getFullYear()]
@@ -153,28 +153,72 @@ exports.getWeeklyMVP = async (req, res) => {
   const { team_id, week_number, year } = req.params;
   try {
     const result = await db.query(
-      'SELECT mvp.*, u.username, p.first_name, p.last_name FROM weekly_mvps mvp JOIN users u ON mvp.player_id = u.id JOIN profiles p ON u.id = p.user_id WHERE team_id = $1 AND week_number = $2 AND year = $3',
+      `SELECT mvp.*, u.username, p.first_name, p.last_name, p.profile_image 
+       FROM weekly_mvps mvp 
+       JOIN users u ON mvp.player_id = u.id 
+       LEFT JOIN profiles p ON u.id = p.user_id 
+       WHERE mvp.team_id = $1 AND mvp.week_number = $2 AND mvp.year = $3`,
       [team_id, week_number, year]
     );
-    res.json(result.rows[0]);
+    res.json(result.rows[0] || null);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching MVP' });
   }
 };
 
-exports.voteMVP = async (req, res) => {
-  const { team_id, player_id, week_number, year } = req.body;
+exports.getTeamMVPHistory = async (req, res) => {
+  const { team_id } = req.params;
   try {
     const result = await db.query(
-      `INSERT INTO weekly_mvps (team_id, player_id, week_number, year, votes_count) 
-       VALUES ($1, $2, $3, $4, 1) 
-       ON CONFLICT (team_id, week_number, year) 
-       DO UPDATE SET votes_count = weekly_mvps.votes_count + 1 
-       RETURNING *`,
-      [team_id, player_id, week_number, year]
+      `SELECT mvp.*, u.username, p.first_name, p.last_name, p.profile_image 
+       FROM weekly_mvps mvp 
+       JOIN users u ON mvp.player_id = u.id 
+       LEFT JOIN profiles p ON u.id = p.user_id 
+       WHERE mvp.team_id = $1 
+       ORDER BY mvp.year DESC, mvp.week_number DESC`,
+      [team_id]
     );
-    res.json(result.rows[0]);
+    res.json(result.rows);
   } catch (err) {
-    res.status(500).json({ message: 'Error voting MVP' });
+    res.status(500).json({ message: 'Error fetching MVP history' });
+  }
+};
+
+exports.selectMVP = async (req, res) => {
+  const { team_id, player_id, week_number, year } = req.body;
+  const userId = req.user.id;
+  const userRole = req.user.role;
+
+  try {
+    // 1. Authorization: Only Coach of this team or Admin/Superadmin
+    if (userRole !== 'admin' && userRole !== 'superadmin') {
+      const teamRes = await db.query('SELECT coach_id FROM teams WHERE id = $1', [team_id]);
+      if (teamRes.rows.length === 0 || teamRes.rows[0].coach_id !== userId) {
+        return res.status(403).json({ message: 'No tienes permiso para seleccionar el MVP de este equipo' });
+      }
+    }
+
+    // 2. Upsert the MVP
+    const existing = await db.query(
+      'SELECT id FROM weekly_mvps WHERE team_id = $1 AND week_number = $2 AND year = $3',
+      [team_id, week_number, year]
+    );
+
+    if (existing.rows.length > 0) {
+      await db.query(
+        'UPDATE weekly_mvps SET player_id = $1 WHERE id = $2',
+        [player_id, existing.rows[0].id]
+      );
+    } else {
+      await db.query(
+        'INSERT INTO weekly_mvps (team_id, player_id, week_number, year) VALUES ($1, $2, $3, $4)',
+        [team_id, player_id, week_number, year]
+      );
+    }
+
+    res.json({ message: 'MVP seleccionado correctamente' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Error seleccionando MVP' });
   }
 };
