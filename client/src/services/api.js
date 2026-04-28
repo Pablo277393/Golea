@@ -61,8 +61,9 @@ export const gamificationService = {
   getCombo: () => api.get('/gamification/combo'),
   submitPredictions: (data) => api.post('/gamification/predictions', data),
   getWeeklyPrize: () => api.get('/gamification/prizes/active'),
-  getMVP: (teamId, week, year) => api.get(`/gamification/mvp/${teamId}/${week}/${year}`),
-  voteMVP: (data) => api.post('/gamification/mvp/vote', data),
+  getMVP: (teamId) => api.get(`/gamification/mvp/${teamId}`),
+  getMVPHistory: (teamId) => api.get(`/gamification/mvp/${teamId}/history`),
+  selectMVP: (data) => api.post('/gamification/mvp/select', data),
 };
 
 export const adService = {

@@ -148,17 +148,19 @@ exports.getWeeklyPrize = async (req, res) => {
   }
 };
 
-// Weekly MVP
-exports.getWeeklyMVP = async (req, res) => {
-  const { team_id, week_number, year } = req.params;
+// Latest MVP for a team
+exports.getTeamMVP = async (req, res) => {
+  const { team_id } = req.params;
   try {
     const result = await db.query(
-      `SELECT mvp.*, u.username, p.first_name, p.last_name, p.profile_image 
+      `SELECT mvp.*, u.username, p.first_name, p.last_name, p.avatar_url as profile_image 
        FROM weekly_mvps mvp 
        JOIN users u ON mvp.player_id = u.id 
        LEFT JOIN profiles p ON u.id = p.user_id 
-       WHERE mvp.team_id = $1 AND mvp.week_number = $2 AND mvp.year = $3`,
-      [team_id, week_number, year]
+       WHERE mvp.team_id = $1
+       ORDER BY mvp.year DESC, mvp.week_number DESC
+       LIMIT 1`,
+      [team_id]
     );
     res.json(result.rows[0] || null);
   } catch (err) {
@@ -170,12 +172,13 @@ exports.getTeamMVPHistory = async (req, res) => {
   const { team_id } = req.params;
   try {
     const result = await db.query(
-      `SELECT mvp.*, u.username, p.first_name, p.last_name, p.profile_image 
+      `SELECT mvp.*, u.username, p.first_name, p.last_name, p.avatar_url as profile_image 
        FROM weekly_mvps mvp 
        JOIN users u ON mvp.player_id = u.id 
        LEFT JOIN profiles p ON u.id = p.user_id 
        WHERE mvp.team_id = $1 
-       ORDER BY mvp.year DESC, mvp.week_number DESC`,
+       ORDER BY mvp.year DESC, mvp.week_number DESC
+       LIMIT 5`,
       [team_id]
     );
     res.json(result.rows);
@@ -185,7 +188,7 @@ exports.getTeamMVPHistory = async (req, res) => {
 };
 
 exports.selectMVP = async (req, res) => {
-  const { team_id, player_id, week_number, year } = req.body;
+  const { team_id, player_id } = req.body;
   const userId = req.user.id;
   const userRole = req.user.role;
 
@@ -198,23 +201,20 @@ exports.selectMVP = async (req, res) => {
       }
     }
 
-    // 2. Upsert the MVP
-    const existing = await db.query(
-      'SELECT id FROM weekly_mvps WHERE team_id = $1 AND week_number = $2 AND year = $3',
-      [team_id, week_number, year]
-    );
+    // 2. Get current week and year
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const pastDaysOfYear = (now - startOfYear) / 86400000;
+    const weekNumber = Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+    const year = now.getFullYear();
 
-    if (existing.rows.length > 0) {
-      await db.query(
-        'UPDATE weekly_mvps SET player_id = $1 WHERE id = $2',
-        [player_id, existing.rows[0].id]
-      );
-    } else {
-      await db.query(
-        'INSERT INTO weekly_mvps (team_id, player_id, week_number, year) VALUES ($1, $2, $3, $4)',
-        [team_id, player_id, week_number, year]
-      );
-    }
+    // 3. Upsert the MVP for the current week
+    await db.query(
+      `INSERT INTO weekly_mvps (team_id, player_id, week_number, year) 
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT(team_id, week_number, year) DO UPDATE SET player_id = $2`,
+      [team_id, player_id, weekNumber, year]
+    );
 
     res.json({ message: 'MVP seleccionado correctamente' });
   } catch (err) {

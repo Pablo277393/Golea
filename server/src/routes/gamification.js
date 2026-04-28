@@ -12,7 +12,7 @@ router.post('/predictions', authenticateToken, gamificationController.submitPred
 router.get('/prizes/active', authenticateToken, gamificationController.getWeeklyPrize);
 
 // MVP
-router.get('/mvp/:team_id/:week_number/:year', authenticateToken, gamificationController.getWeeklyMVP);
+router.get('/mvp/:team_id', authenticateToken, gamificationController.getTeamMVP);
 router.get('/mvp/:team_id/history', authenticateToken, gamificationController.getTeamMVPHistory);
 router.post('/mvp/select', authenticateToken, gamificationController.selectMVP);
 
