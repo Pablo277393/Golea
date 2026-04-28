@@ -8,6 +8,7 @@ const PredictionsView = () => {
   const [matches, setMatches] = useState([]);
   const [prize, setPrize] = useState(null);
   const [predictions, setPredictions] = useState({}); // { matchId: 'LOCAL' | 'EMPATE' | 'VISITANTE' }
+  const [savedMatchIds, setSavedMatchIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -26,10 +27,14 @@ const PredictionsView = () => {
         
         // Map existing predictions
         const predMap = {};
+        const savedIds = new Set();
         userPredsRes.data.forEach(p => {
           predMap[p.match_id] = p.prediction;
+          savedIds.add(p.match_id);
         });
         setPredictions(predMap);
+        setSavedMatchIds(savedIds);
+        if (savedIds.size >= 3) setSubmitted(true);
       } catch (err) {
         console.error('Error fetching quiniela data:', err);
       } finally {
@@ -41,9 +46,9 @@ const PredictionsView = () => {
   }, []);
 
   const handleSelect = (matchId, value) => {
-    // Check if match is locked (1 hour before)
+    // Check if match is locked (1 hour before) or already saved
     const match = matches.find(m => m.id === matchId);
-    if (isMatchLocked(match)) return;
+    if (isMatchLocked(match) || savedMatchIds.has(matchId)) return;
 
     setPredictions(prev => ({
       ...prev,
@@ -62,12 +67,19 @@ const PredictionsView = () => {
   };
 
   const handleSubmit = async () => {
-    const predArray = Object.entries(predictions).map(([matchId, val]) => ({
-      match_id: parseInt(matchId),
-      prediction: val
-    }));
+    const predArray = Object.entries(predictions)
+      .filter(([matchId]) => !savedMatchIds.has(parseInt(matchId)))
+      .map(([matchId, val]) => ({
+        match_id: parseInt(matchId),
+        prediction: val
+      }));
 
-    if (predArray.length < matches.length) {
+    if (predArray.length === 0 && savedMatchIds.size >= matches.length) {
+      alert('Tus predicciones ya han sido guardadas y no pueden modificarse.');
+      return;
+    }
+
+    if (Object.keys(predictions).length < matches.length) {
       alert('Por favor, complete todas las predicciones del combo.');
       return;
     }
@@ -76,10 +88,11 @@ const PredictionsView = () => {
     try {
       await gamificationService.submitPredictions({ predictions: predArray });
       setSubmitted(true);
-      alert('¡Triple predicción guardada con éxito!');
+      setSavedMatchIds(new Set([...savedMatchIds, ...predArray.map(p => p.match_id)]));
+      alert('¡Triple predicción guardada con éxito! Ya no podrás modificarla.');
     } catch (err) {
       console.error('Error submitting predictions:', err);
-      alert('Error al guardar las predicciones.');
+      alert(err.response?.data?.message || 'Error al guardar las predicciones.');
     } finally {
       setSubmitting(false);
     }
@@ -115,6 +128,7 @@ const PredictionsView = () => {
         {/* Triple Challenge Section */}
         {matches.map((match, idx) => {
           const locked = isMatchLocked(match);
+          const alreadySaved = savedMatchIds.has(match.id);
           const selection = predictions[match.id];
           
           return (
@@ -148,13 +162,13 @@ const PredictionsView = () => {
                   {['LOCAL', 'EMPATE', 'VISITANTE'].map((type) => (
                     <button
                       key={type}
-                      disabled={locked}
+                      disabled={locked || alreadySaved}
                       onClick={() => handleSelect(match.id, type)}
                       className={`py-4 rounded-xl border font-bold uppercase tracking-widest transition-all duration-300 relative overflow-hidden ${
                         selection === type 
                           ? 'bg-primary border-primary text-dark shadow-gold-glow scale-105 z-10'
                           : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'
-                      } ${locked ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      } ${locked || (alreadySaved && selection !== type) ? 'opacity-50 cursor-not-allowed' : ''} ${alreadySaved && selection === type ? 'ring-2 ring-primary ring-offset-2 ring-offset-dark' : ''}`}
                     >
                       <span className="text-sm">{type === 'EMPATE' ? 'X' : type === 'LOCAL' ? '1' : '2'}</span>
                       <div className="text-[9px] mt-1 opacity-60">{type.substring(0, 3)}</div>
@@ -163,33 +177,37 @@ const PredictionsView = () => {
                 </div>
               </div>
               
-              {locked && (
+              {locked ? (
                 <div className="bg-red-500/10 px-6 py-2 border-t border-red-500/20 text-center">
                   <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest">Predicción Cerrada</span>
                 </div>
-              )}
+              ) : alreadySaved ? (
+                <div className="bg-green-500/10 px-6 py-2 border-t border-green-500/20 text-center">
+                  <span className="text-[9px] font-bold text-green-400 uppercase tracking-widest">Predicción Confirmada</span>
+                </div>
+              ) : null}
             </Card>
           );
         })}
 
         <div className="pt-6">
           <Button 
-            variant="primary" 
-            className="w-full py-6 text-xl rounded-2xl shadow-gold-glow"
+            variant={submitted ? "secondary" : "primary"}
+            className={`w-full py-6 text-xl rounded-2xl ${!submitted ? 'shadow-gold-glow' : ''}`}
             onClick={handleSubmit}
-            disabled={submitting || Object.keys(predictions).length < matches.length}
+            disabled={submitting || Object.keys(predictions).length < matches.length || submitted}
             icon={submitted ? CheckCircle2 : Target}
           >
-            {submitting ? 'Guardando...' : submitted ? 'Predicción Actualizada' : 'Confirmar Triple Predicción'}
+            {submitting ? 'Guardando...' : submitted ? 'Predicción Guardada' : 'Confirmar Triple Predicción'}
           </Button>
           
           <div className="mt-8 p-8 bg-primary/5 border border-primary/10 rounded-2xl">
              <div className="flex gap-4 items-start">
                <Star size={20} className="text-primary shrink-0 mt-1" />
                <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2">Reglas del Triple Desafío</h4>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-widest mb-2">Premios del Triple Desafío</h4>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
-                    Las combinadas incluyen el partido del <span className="text-white font-bold">Primer Equipo</span> y los compromisos de su categoría. Se requiere el acierto de los 3 resultados para optar al premio semanal. Las predicciones se cierran 1 hora antes de cada inicio.
+                    Gana el <span className="text-white font-bold">Premio Semanal</span> acertando tu partido y el resultado aleatorio. ¡Si además aciertas el del <span className="text-primary font-bold">Primer Equipo</span>, te llevas el <span className="text-white font-bold italic">Premio Bonus</span>! Las predicciones se cierran 1 hora antes de cada inicio.
                   </p>
                </div>
              </div>

@@ -3,7 +3,7 @@ const db = require('../config/db');
 exports.getMatches = async (req, res) => {
   try {
     let query = `
-      SELECT m.*, t.name as team_name 
+      SELECT m.*, t.name as team_name, t.coach_id 
       FROM matches m 
       JOIN teams t ON m.team_id = t.id 
       WHERE 
@@ -97,19 +97,42 @@ exports.publishMatch = async (req, res) => {
 exports.updateScore = async (req, res) => {
   const { home_score, away_score } = req.body;
   const matchId = req.params.id;
+  const userId = req.user.id;
+  const userRole = req.user.role.toLowerCase();
+
   try {
+    // 1. Authorization Check
+    const matchRes = await db.query(
+      'SELECT m.*, t.coach_id FROM matches m JOIN teams t ON m.team_id = t.id WHERE m.id = $1',
+      [matchId]
+    );
+
+    if (matchRes.rows.length === 0) {
+      return res.status(404).json({ message: 'Match not found' });
+    }
+
+    const matchData = matchRes.rows[0];
+
+    if (!['admin', 'superadmin'].includes(userRole)) {
+      if (userRole !== 'coach' || matchData.coach_id !== userId) {
+        return res.status(403).json({ message: 'No tienes permiso para actualizar el marcador de este partido' });
+      }
+    }
+
+    // 2. Update Score
     await db.query(
       'UPDATE matches SET home_score = $1, away_score = $2 WHERE id = $3',
       [home_score, away_score, matchId]
     );
 
-    const result = await db.query(
-      'SELECT * FROM matches WHERE id = $1',
+    // Fetch updated data
+    const updatedMatch = await db.query(
+      'SELECT m.*, t.name as team_name FROM matches m JOIN teams t ON m.team_id = t.id WHERE m.id = $1',
       [matchId]
     );
+    const updatedMatchData = updatedMatch.rows[0];
 
-    const matchData = result.rows[0];
-    if (matchData) {
+    if (updatedMatchData) {
       // Determine actual result
       let actualResult = 'EMPATE';
       if (home_score > away_score) actualResult = 'LOCAL';
@@ -124,10 +147,78 @@ exports.updateScore = async (req, res) => {
       );
       
       console.log(`[EVALUATION] Predictions for Match ${matchId} evaluated as ${actualResult}`);
+
+      // NOTIFICATIONS LOGIC
+      // 1. Get all users who hit this match
+      const hits = await db.query(
+        'SELECT p.user_id, u.username FROM predictions p JOIN users u ON p.user_id = u.id WHERE p.match_id = $1 AND p.points_earned = 1',
+        [matchId]
+      );
+
+      for (const hit of hits.rows) {
+        const userIdHit = hit.user_id;
+        
+        // Notify single hit
+        await db.query(
+          `INSERT INTO notifications (sender_id, recipient_id, scope, type, title, message) 
+           VALUES ($1, $2, $3, $4, $5, $6)`,
+          [1, userIdHit, 'individual', 'informative', '¡Acierto en la Quiniela!', `Has acertado el resultado del partido ${updatedMatchData.team_name} vs ${updatedMatchData.opponent}.`]
+        );
+
+        // 2. Check for Prizes (Prize or Bonus)
+        // We need to fetch the 3 matches that were part of the user's "combo"
+        // For simplicity, we'll look at the user's correct predictions in the last 7 days
+        // and categorize them.
+
+        const userPredictions = await db.query(
+          `SELECT p.*, m.team_id, m.opponent 
+           FROM predictions p 
+           JOIN matches m ON p.match_id = m.id 
+           WHERE p.user_id = $1 AND p.created_at >= date('now', '-7 days')`,
+          [userIdHit]
+        );
+
+        const correctPreds = userPredictions.rows.filter(rp => rp.points_earned === 1);
+        
+        // Identify matches
+        const hitFirstTeam = correctPreds.some(rp => rp.team_id === 1);
+        
+        // Own teams
+        const userTeamsRes = await db.query(
+          `SELECT team_id FROM team_players WHERE player_id = $1
+           UNION
+           SELECT team_id FROM team_players WHERE player_id IN (SELECT child_id FROM family_relations WHERE parent_id = $1)`,
+          [userIdHit]
+        );
+        const userTeamIds = userTeamsRes.rows.map(r => r.team_id);
+        const hitOwnTeam = correctPreds.some(rp => userTeamIds.includes(rp.team_id) && rp.team_id !== 1);
+        
+        // Random/Filler (not first team and not own team)
+        const hitRandom = correctPreds.some(rp => rp.team_id !== 1 && !userTeamIds.includes(rp.team_id));
+
+        if (hitOwnTeam && hitRandom) {
+          if (hitFirstTeam) {
+            // BONUS PRIZE (All 3)
+            await db.query(
+              `INSERT INTO notifications (sender_id, recipient_id, scope, type, title, message) 
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [1, userIdHit, 'individual', 'informative', '¡PREMIO BONUS! Triple Desafío Completo', '¡HAS ACERTADO LOS 3 PARTIDOS! (Tu equipo, el random y el primer equipo). Reclama tu premio especial en las oficinas.']
+            );
+          } else {
+            // STANDARD PRIZE (Own + Random)
+            await db.query(
+              `INSERT INTO notifications (sender_id, recipient_id, scope, type, title, message) 
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [1, userIdHit, 'individual', 'informative', '¡Has ganado un Premio!', '¡Enhorabuena! Has acertado tu partido y el resultado random. Tienes un premio esperándote.']
+            );
+          }
+        }
+      }
     }
 
-    res.json(matchData);
+    res.json(updatedMatchData);
   } catch (err) {
+    console.error('Error updating score and sending notifications:', err);
     res.status(500).json({ message: 'Error updating score' });
   }
 };

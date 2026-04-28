@@ -42,6 +42,7 @@ const ScheduleView = () => {
   const [viewMode, setViewMode] = useState('list');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [callups, setCallups] = useState([]);
+  const [scoreFormData, setScoreFormData] = useState({ home_score: '', away_score: '' });
 
   const [formData, setFormData] = useState({
     team_id: '',
@@ -80,6 +81,10 @@ const ScheduleView = () => {
   useEffect(() => {
     if (selectedMatch) {
       fetchCallups(selectedMatch.id);
+      setScoreFormData({
+        home_score: selectedMatch.home_score ?? '',
+        away_score: selectedMatch.away_score ?? ''
+      });
     }
   }, [selectedMatch]);
 
@@ -89,6 +94,20 @@ const ScheduleView = () => {
       setCallups(res.data);
     } catch (err) {
       console.error('Error fetching callups:', err);
+    }
+  };
+
+  const handleUpdateScore = async () => {
+    try {
+      const res = await matchService.updateScore(selectedMatch.id, {
+        home_score: parseInt(scoreFormData.home_score),
+        away_score: parseInt(scoreFormData.away_score)
+      });
+      setSelectedMatch(res.data);
+      alert('Marcador actualizado correctamente');
+      fetchData();
+    } catch (err) {
+      alert('Error al actualizar el marcador');
     }
   };
 
@@ -162,6 +181,7 @@ const ScheduleView = () => {
 
   const isStaff = ['coach', 'admin', 'superadmin'].includes(user?.role);
   const isAdmin = ['admin', 'superadmin'].includes(user?.role);
+  const canEditScore = isAdmin || (user?.role === 'coach' && selectedMatch?.coach_id === user?.id);
 
   if (loading) {
     return (
@@ -231,14 +251,50 @@ const ScheduleView = () => {
                 <h3 className="text-3xl font-bold">vs {selectedMatch.opponent}</h3>
                 <div className="flex items-center gap-3 mt-2">
                   <span className="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold uppercase tracking-widest">{selectedMatch.team_id === 1 ? 'Primer Equipo - Élite' : 'Competición Oficial'}</span>
-                  {selectedMatch.player_username && (
-                    <span className="px-3 py-1 bg-white/5 text-slate-400 border border-white/5 rounded-full text-[10px] font-black uppercase tracking-[0.15em]">
-                      Jugador: {selectedMatch.player_first_name || selectedMatch.player_username}
+                  {selectedMatch.home_score !== null && (
+                    <span className="px-3 py-1 bg-white/10 text-white border border-white/20 rounded-full text-[12px] font-black tracking-widest">
+                      RESULTADO: {selectedMatch.home_score} - {selectedMatch.away_score}
                     </span>
                   )}
                 </div>
               </div>
             </div>
+
+            {/* Score Editor for Authorized Personnel */}
+            {canEditScore && selectedMatch.published === 1 && (
+              <div className="mb-10 p-6 bg-primary/5 border border-primary/20 rounded-2xl">
+                <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-4 flex items-center gap-2">
+                  <Trophy size={14} /> Actualizar Resultado Final
+                </h4>
+                <div className="flex items-center gap-6">
+                  <div className="flex-1 grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">Local</label>
+                      <input 
+                        type="number" 
+                        value={scoreFormData.home_score}
+                        onChange={(e) => setScoreFormData({...scoreFormData, home_score: e.target.value})}
+                        className="input-base text-center text-xl font-bold py-2"
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-500 uppercase">Visitante</label>
+                      <input 
+                        type="number" 
+                        value={scoreFormData.away_score}
+                        onChange={(e) => setScoreFormData({...scoreFormData, away_score: e.target.value})}
+                        className="input-base text-center text-xl font-bold py-2"
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
+                  <Button variant="primary" className="h-full px-6" onClick={handleUpdateScore}>
+                    Guardar
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 p-6 bg-white/5 rounded-2xl border border-white/5">
               <div className="flex items-center gap-4">

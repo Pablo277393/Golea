@@ -99,6 +99,13 @@ exports.submitPredictions = async (req, res) => {
     for (const p of predictions) {
       const { match_id, prediction } = p;
 
+      // Check if prediction already exists
+      const existing = await db.query('SELECT id FROM predictions WHERE match_id = $1 AND user_id = $2', [match_id, req.user.id]);
+      if (existing.rows.length > 0) {
+        // If it already exists, we skip it according to the rule "no podrá volver a intentar"
+        continue;
+      }
+
       // Check closure rule (1 hour before)
       const matchRes = await db.query('SELECT match_date, match_time FROM matches WHERE id = $1', [match_id]);
       if (matchRes.rows.length === 0) continue;
@@ -108,19 +115,20 @@ exports.submitPredictions = async (req, res) => {
       const diffMins = diffMs / (1000 * 60);
 
       if (diffMins < 60) {
-        // Skip or return error? We'll skip for now but in a real app better to warn
         continue;
       }
 
       const resInsert = await db.query(
         `INSERT INTO predictions (match_id, user_id, prediction) 
          VALUES ($1, $2, $3) 
-         ON CONFLICT (match_id, user_id) 
-         DO UPDATE SET prediction = $3
          RETURNING *`,
         [match_id, req.user.id, prediction]
       );
       results.push(resInsert.rows[0]);
+    }
+
+    if (results.length === 0) {
+      return res.status(400).json({ message: 'No se pudieron guardar las predicciones (ya existen o el tiempo expiró)' });
     }
 
     res.json(results);
