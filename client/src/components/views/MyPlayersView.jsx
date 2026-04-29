@@ -3,6 +3,9 @@ import { parentService } from '../../services/api';
 import { UserPlus, Users, QrCode, AlertCircle, CheckCircle2, ChevronRight, User } from 'lucide-react';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
+import AttendanceExcelTable from '../ui/AttendanceExcelTable';
+import { attendanceService } from '../../services/api';
+import { ArrowLeft } from 'lucide-react';
 
 const MyPlayersView = () => {
   const [players, setPlayers] = useState([]);
@@ -10,6 +13,8 @@ const MyPlayersView = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+  const [selectedChild, setSelectedChild] = useState(null);
+  const [attendanceData, setAttendanceData] = useState([]);
 
   useEffect(() => {
     fetchPlayers();
@@ -48,6 +53,73 @@ const MyPlayersView = () => {
       setSubmitting(false);
     }
   };
+
+  const handleSelectChild = async (child) => {
+    setLoading(true);
+    try {
+      const res = await attendanceService.getPlayerAttendance(child.id);
+      // attendanceService.getPlayerAttendance returns a list of trainings with status/is_golden_cone joined
+      // We need to adapt it for AttendanceExcelTable which expects { players, trainings, attendanceData }
+      setSelectedChild(child);
+      
+      // Adaptation:
+      const trainings = res.data.map(t => ({
+        id: t.id,
+        training_date: t.training_date,
+        training_time: t.training_time,
+        location: t.location
+      }));
+      
+      const attendance = res.data.map(t => ({
+        training_id: t.id,
+        player_id: child.id,
+        status: t.status,
+        is_golden_cone: t.is_golden_cone
+      }));
+
+      setAttendanceData(attendance);
+      // We need unique trainings (though they should be unique from the query)
+      const uniqueTrainings = Array.from(new Set(trainings.map(t => t.id)))
+        .map(id => trainings.find(t => t.id === id));
+        
+      setChildTrainings(uniqueTrainings);
+
+    } catch (err) {
+      console.error('Error fetching child attendance', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [childTrainings, setChildTrainings] = useState([]);
+
+  if (selectedChild) {
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-left-4 duration-500">
+        <Button 
+          variant="secondary" 
+          onClick={() => setSelectedChild(null)}
+          icon={ArrowLeft}
+        >
+          Volver a Mis Jugadores
+        </Button>
+
+        <header>
+          <h2 className="text-4xl font-bold tracking-tight mb-2">
+            Entrenamientos: <span className="text-gold-glow">{selectedChild.first_name}</span>
+          </h2>
+          <p className="text-slate-400 font-medium">Historial completo de asistencia y reconocimientos.</p>
+        </header>
+
+        <AttendanceExcelTable 
+          players={[selectedChild]}
+          trainings={childTrainings}
+          attendanceData={attendanceData}
+          readOnly={true}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -133,7 +205,11 @@ const MyPlayersView = () => {
           ) : players.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {players.map((player) => (
-                <Card key={player.id} className="p-6 hover:border-primary/40 transition-all group cursor-pointer overflow-hidden relative">
+                <Card 
+                  key={player.id} 
+                  className="p-6 hover:border-primary/40 transition-all group cursor-pointer overflow-hidden relative"
+                  onClick={() => handleSelectChild(player)}
+                >
                   {/* Decorative element */}
                   <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
                     <User size={120} />

@@ -7,6 +7,8 @@ const { authenticateToken, authorizeRoles } = require('../middlewares/auth');
 router.use(authenticateToken);
 router.use(authorizeRoles('player', 'superadmin'));
 
-router.post('/generate-linking-code', playerController.generateLinkingCode);
+router.post('/generate-linking-code', authenticateToken, playerController.generateLinkingCode);
+router.get('/profile', authenticateToken, playerController.getProfile);
+router.put('/profile', authenticateToken, playerController.updateProfile);
 
 module.exports = router;

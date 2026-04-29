@@ -39,10 +39,12 @@ const query = (text, params = []) => {
     // Create a new params array that follows the sequential '?' order
     const orderedParams = placeholders.map(index => params[index]);
     
-    // Check if it's a SELECT query
-    const isSelect = translatedText.trim().toUpperCase().startsWith('SELECT');
+    // Check if it's a query that returns rows
+    const upperText = translatedText.trim().toUpperCase();
+    const isSelect = upperText.startsWith('SELECT');
+    const isReturning = upperText.includes('RETURNING');
 
-    if (isSelect) {
+    if (isSelect || isReturning) {
       db.all(translatedText, orderedParams, (err, rows) => {
         if (err) return reject(err);
         resolve({ rows: rows || [] });

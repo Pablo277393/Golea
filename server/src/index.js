@@ -15,6 +15,7 @@ const familyRoutes = require('./routes/family');
 const parentRoutes = require('./routes/parent');
 const playerRoutes = require('./routes/player');
 const adRoutes = require('./routes/ads');
+const attendanceRoutes = require('./routes/attendance');
 const path = require('path');
 
 const app = express();
@@ -38,6 +39,7 @@ app.use('/api/family', familyRoutes);
 app.use('/api/parent', parentRoutes);
 app.use('/api/player', playerRoutes);
 app.use('/api/ads', adRoutes);
+app.use('/api/attendance', attendanceRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

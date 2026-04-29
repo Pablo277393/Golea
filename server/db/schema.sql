@@ -21,6 +21,7 @@ CREATE TABLE profiles (
     phone TEXT,
     bio TEXT,
     avatar_url TEXT,
+    birth_date DATE,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -163,5 +164,16 @@ CREATE TABLE weekly_mvps (
     votes_count INTEGER DEFAULT 0,
     UNIQUE(team_id, week_number, year),
     FOREIGN KEY(team_id) REFERENCES teams(id) ON DELETE CASCADE,
+    FOREIGN KEY(player_id) REFERENCES users(id) ON DELETE CASCADE
+);
+-- Training Attendance
+CREATE TABLE training_attendance (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    training_id INTEGER NOT NULL,
+    player_id INTEGER NOT NULL,
+    status TEXT CHECK(status IN ('present', 'absent')) DEFAULT 'present',
+    is_golden_cone INTEGER DEFAULT 0,
+    UNIQUE(training_id, player_id),
+    FOREIGN KEY(training_id) REFERENCES trainings(id) ON DELETE CASCADE,
     FOREIGN KEY(player_id) REFERENCES users(id) ON DELETE CASCADE
 );

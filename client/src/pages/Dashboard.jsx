@@ -12,7 +12,8 @@ import {
   Menu,
   X,
   Megaphone,
-  Shield
+  Shield,
+  User as UserIcon
 } from 'lucide-react';
 import Overview from '../components/views/Overview';
 import TeamsView from '../components/views/TeamsView';
@@ -25,6 +26,7 @@ import AdsAdminView from '../components/views/AdsAdminView';
 import UsersManagementView from '../components/views/UsersManagementView';
 import AdBanner from '../components/ads/AdBanner';
 import MyPlayersView from '../components/views/MyPlayersView';
+import PlayerProfileView from '../components/views/PlayerProfileView';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Container from '../components/ui/Container';
@@ -36,6 +38,7 @@ const Dashboard = ({ defaultView }) => {
 
   const menuItems = [
     { icon: <LayoutDashboard size={20} />, label: 'Resumen', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
+    { icon: <UserIcon size={20} />, label: 'Perfil', roles: ['player'] },
     { icon: <Users size={30} />, label: 'Mis jugadores', roles: ['parent'] },
     { icon: <Users size={20} />, label: 'Equipos', roles: ['coach', 'admin', 'superadmin'] },
     { icon: <Calendar size={20} />, label: 'Calendario', roles: ['coach', 'player', 'parent', 'admin', 'superadmin'] },
@@ -67,6 +70,7 @@ const Dashboard = ({ defaultView }) => {
       'Quiniela': <PredictionsView />,
       'MVP Semanal': <MVPView />,
       'Mis jugadores': <MyPlayersView />,
+      'Perfil': <PlayerProfileView />,
       'Gestión Publicidad': <AdsAdminView />,
       'Gestión Usuarios': <UsersManagementView />
     };

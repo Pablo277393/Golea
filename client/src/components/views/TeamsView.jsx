@@ -19,8 +19,12 @@ import {
   Lock,
   UserCheck,
   MoreVertical,
-  MinusCircle
+  MinusCircle,
+  ClipboardCheck,
+  Save
 } from 'lucide-react';
+import { attendanceService } from '../../services/api';
+import AttendanceExcelTable from '../ui/AttendanceExcelTable';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
 import Input from '../ui/Input';
@@ -33,6 +37,11 @@ const TeamsView = () => {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamPlayers, setTeamPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [attendanceView, setAttendanceView] = useState(false);
+  const [attendanceData, setAttendanceData] = useState([]);
+  const [trainings, setTrainings] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   // Modal States
   const [showCreateTeam, setShowCreateTeam] = useState(false);
@@ -93,7 +102,86 @@ const TeamsView = () => {
 
   const handleSelectTeam = (team) => {
     setSelectedTeam(team);
+    setAttendanceView(false);
     fetchRoster(team.id);
+  };
+
+  const fetchAttendance = async () => {
+    setLoading(true);
+    try {
+      const res = await attendanceService.getTeamAttendance(selectedTeam.id);
+      setAttendanceData(res.data?.attendance || []);
+      setTrainings(res.data?.trainings || []);
+    } catch (err) {
+      console.error('Error fetching attendance', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleAttendanceView = () => {
+    if (!attendanceView) {
+      fetchAttendance();
+    }
+    setAttendanceView(!attendanceView);
+  };
+
+  const handleToggleStatus = (trainingId, playerId, status) => {
+    setHasChanges(true);
+    setAttendanceData(prev => {
+      const existing = prev.find(a => a.training_id === trainingId && a.player_id === playerId);
+      if (existing) {
+        return prev.map(a => (a.training_id === trainingId && a.player_id === playerId) ? { ...a, status } : a);
+      } else {
+        return [...prev, { training_id: trainingId, player_id: playerId, status, is_golden_cone: 0 }];
+      }
+    });
+  };
+
+  const handleToggleGoldenCone = (trainingId, playerId, isGolden) => {
+    setHasChanges(true);
+    const coneValue = isGolden ? 1 : 0;
+    
+    setAttendanceData(prev => {
+      let next = prev.map(a => (a.training_id === trainingId && a.is_golden_cone === 1) ? { ...a, is_golden_cone: 0 } : a);
+      const existing = next.find(a => a.training_id === trainingId && a.player_id === playerId);
+      if (existing) {
+        return next.map(a => (a.training_id === trainingId && a.player_id === playerId) ? { ...a, is_golden_cone: coneValue } : a);
+      } else {
+        return [...next, { training_id: trainingId, player_id: playerId, status: 'present', is_golden_cone: coneValue }];
+      }
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    if (!selectedTeam) return;
+    setIsSaving(true);
+    try {
+      for (const training of trainings) {
+        // Use String() to avoid type mismatch between string/number
+        const trainingAttendance = attendanceData.filter(a => String(a.training_id) === String(training.id));
+        if (trainingAttendance.length > 0) {
+          await attendanceService.updateAttendance(training.id, trainingAttendance);
+        }
+      }
+      setHasChanges(false);
+      alert('Cambios guardados con éxito');
+    } catch (err) {
+      console.error('Save error:', err);
+      const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
+      alert('Error al guardar cambios: ' + errorMsg);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddSession = async () => {
+    try {
+      const res = await attendanceService.createQuickSession(selectedTeam.id);
+      setTrainings(prev => [res.data, ...prev]);
+    } catch (err) {
+      alert('Error al crear sesión');
+    }
   };
 
   // User Actions (Coach/Player)
@@ -252,14 +340,44 @@ const TeamsView = () => {
               <span className="flex items-center gap-1.5"><Users size={14} className="text-primary" /> {teamPlayers.length} Jugadores</span>
             </div>
           </div>
-          {(user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'coach') && (
-            <Button variant="primary" icon={Plus} onClick={openAddRoster}>
-              Gestionar Plantilla
+          <div className="flex gap-3">
+            {attendanceView && hasChanges && (
+              <Button 
+                variant="primary" 
+                icon={Save} 
+                onClick={handleSaveChanges}
+                className="bg-green-600 hover:bg-green-700 border-green-500 shadow-lg shadow-green-500/20"
+                loading={isSaving}
+              >
+                Guardar Cambios
+              </Button>
+            )}
+            <Button 
+              variant={attendanceView ? "primary" : "secondary"} 
+              icon={ClipboardCheck} 
+              onClick={toggleAttendanceView}
+            >
+              {attendanceView ? "Ver Plantilla" : "Pasar Lista"}
             </Button>
-          )}
+            {(user?.role === 'superadmin' || user?.role === 'admin' || user?.role === 'coach') && (
+              <Button variant="primary" icon={Plus} onClick={openAddRoster}>
+                Gestionar Plantilla
+              </Button>
+            )}
+          </div>
         </header>
 
-        <Card className="p-0 overflow-hidden border-white/5" hover={false}>
+        {attendanceView ? (
+          <AttendanceExcelTable 
+            players={teamPlayers}
+            trainings={trainings}
+            attendanceData={attendanceData}
+            onToggleStatus={handleToggleStatus}
+            onToggleGoldenCone={handleToggleGoldenCone}
+            onAddSession={handleAddSession}
+          />
+        ) : (
+          <Card className="p-0 overflow-hidden border-white/5" hover={false}>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead className="bg-white/5">
@@ -315,6 +433,7 @@ const TeamsView = () => {
             </table>
           </div>
         </Card>
+        )}
 
         {/* Modal: Add Player to Roster */}
         {showAddPlayerToRoster && (

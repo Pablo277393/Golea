@@ -83,6 +83,8 @@ export const adService = {
 
 export const playerService = {
   generateLinkingCode: () => api.post('/player/generate-linking-code'),
+  getProfile: () => api.get('/player/profile'),
+  updateProfile: (data) => api.put('/player/profile', data),
 };
 
 export const parentService = {
@@ -92,6 +94,14 @@ export const parentService = {
   getMatches: () => api.get('/parent/matches'),
   getCalendarMatches: () => api.get('/parent/calendar/matches'),
   getUpcomingMatches: () => api.get('/parent/upcoming-matches'),
+};
+
+export const attendanceService = {
+  getTeamAttendance: (teamId) => api.get(`/attendance/team/${teamId}`),
+  createQuickSession: (teamId) => api.post('/attendance/session', { team_id: teamId }),
+  updateAttendance: (trainingId, attendanceData) => api.post(`/attendance/training/${trainingId}`, { attendanceData }),
+  toggleAttendance: (trainingId, playerId, data) => api.post(`/attendance/training/${trainingId}/player/${playerId}`, data),
+  getPlayerAttendance: (playerId) => api.get(`/attendance/player/${playerId}`),
 };
 
 export default api;
